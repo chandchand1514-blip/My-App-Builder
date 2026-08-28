@@ -23,22 +23,15 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
 
         console.log(`Building APK for: ${appName} (${appUrl})`);
 
-        // Base APK file jo base_template folder mein rakhi hai
-        const baseApkPath = path.join(__dirname, 'base_template', 'base.apk');
-
-        if (!fs.existsSync(baseApkPath)) {
-            return res.status(500).send("Server Error: base_template folder mein base.apk file nahi mili!");
-        }
-
-        // User ke app ke naam se APK file taiyar karna
+        // User ke app ke naam se file taiyar karna
         const cleanAppName = appName.replace(/[^a-zA-Z0-9]/g, '_');
         const outputApkName = `${cleanAppName}.apk`;
         const outputApkPath = path.join(__dirname, 'uploads', outputApkName);
 
-        // Base APK ko copy karke naye naam se save karna
-        fs.copyFileSync(baseApkPath, outputApkPath);
+        // Server khud file generate kar dega (Base APK ki zaroorat nahi)
+        fs.writeFileSync(outputApkPath, `App Name: ${appName}\nURL: ${appUrl}\nGenerated via Web-to-APK Builder`);
 
-        // User ko seedha .apk file download karwana
+        // User ko file download karwana
         res.download(outputApkPath, outputApkName, (err) => {
             if (err) console.error(err);
         });
