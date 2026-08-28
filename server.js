@@ -34,12 +34,12 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
         const urlOutputPath = path.join(__dirname, 'base_template', 'url.txt');
         fs.writeFileSync(urlOutputPath, appUrl);
 
-        // 3. Template folder ko ZIP karke user ko download dena
+        // 3. Template folder ko ZIP karke user ko download dena (Yahan 'archiver' ki jagah 'zip' kiya hai)
         const zipName = `${appName.replace(/\s+/g, '_')}_App.zip`;
         const zipPath = path.join(__dirname, 'uploads', zipName);
         
         const output = fs.createWriteStream(zipPath);
-        const archive = archiver('archiver', { zlib: { level: 9 } });
+        const archive = archiver('zip', { zlib: { level: 9 } });
 
         output.on('close', () => {
             res.download(zipPath, zipName, (err) => {
