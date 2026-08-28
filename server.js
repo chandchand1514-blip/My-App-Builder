@@ -1,24 +1,23 @@
 const express = require('express');
 const multer = require('multer');
 const sharp = require('sharp');
+const path = require('path');
 
 const app = express();
-const upload = multer({ dest: 'uploads/' }); // Custom logo yahan aayega
+const upload = multer({ dest: 'uploads/' }); 
 
-// Server zinda hai ya nahi, yeh check karne ka route
+// Yeh route ab seedha aapka banaya hua HTML design dikhayega
 app.get('/', (req, res) => {
-    res.send("DesiStore: Web to APK Builder API is Live!");
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// User se App ka naam aur Logo lene ka route
+// App banne ki request yahan aayegi
 app.post('/build', upload.single('appLogo'), (req, res) => {
     const appName = req.body.appName;
     const appUrl = req.body.appUrl;
     
     console.log(`Building APK for: ${appName}`);
-    res.send(`APK build request received for ${appName}. Cloud compiling start ho gayi hai!`);
-    
-    // Yahan hum aage chalkar Android SDK aur Kotlin template wala logic jodenge
+    res.send(`Badhai ho! ${appName} ka URL (${appUrl}) server ko mil gaya hai. Cloud compilation ka logic jaldi hi add hoga.`);
 });
 
 const PORT = process.env.PORT || 3000;
