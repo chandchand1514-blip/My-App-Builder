@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DesiStore - Web to APK Builder</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f4f7f6; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            width: 90%; 
+            max-width: 400px; 
+        }
+        h2 { text-align: center; color: #333; margin-bottom: 20px; }
+        label { font-weight: bold; display: block; color: #555; margin-bottom: 5px; }
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 20px; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+        }
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            cursor: pointer; 
+        }
+        button:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Build Your APK</h2>
+        <!-- Form data seedha Node.js backend ko jayega -->
+        <form action="/build" method="POST" enctype="multipart/form-data">
+            
+            <label>App Ka Naam</label>
+            <input type="text" name="appName" placeholder="Jaise: Raja Bandar App" required>
+
+            <label>Website Ka Link (URL)</label>
+            <input type="url" name="appUrl" placeholder="https://aapki-website.com" required>
+
+            <label>App Ka Logo</label>
+            <input type="file" name="appLogo" accept="image/png, image/jpeg" required>
+
+            <button type="submit">Convert to APK</button>
+        </form>
+    </div>
+
+</body>
+</html>
