@@ -23,12 +23,15 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
 
         console.log(`Processing App: ${appName} for URL: ${appUrl}`);
 
-        const resizedLogoPath = path.join(__dirname, 'uploads', `processed-${Date.now()}.png`);
+        const logoOutputPath = path.join(__dirname, 'base_template', 'app_logo.png');
         await sharp(logoFile.path)
             .resize(192, 192)
-            .toFile(resizedLogoPath);
+            .toFile(logoOutputPath);
 
-        res.send(`Success! ${appName} ka logo resize ho gaya hai aur URL (${appUrl}) register ho gaya hai.`);
+        const urlOutputPath = path.join(__dirname, 'base_template', 'url.txt');
+        fs.writeFileSync(urlOutputPath, appUrl);
+
+        res.send(`Badhai ho! ${appName} ka URL aur Logo template ke andar successfully inject ho gaye hain.`);
 
     } catch (err) {
         console.error(err);
