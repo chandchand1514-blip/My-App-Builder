@@ -3,7 +3,6 @@ const multer = require('multer');
 const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
-const archiver = require('archiver');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' }); 
@@ -22,34 +21,27 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
             return res.status(400).send("Sabhi fields bharna zaroori hai!");
         }
 
-        console.log(`Processing App: ${appName} for URL: ${appUrl}`);
+        console.log(`Building APK for: ${appName} (${appUrl})`);
 
-        // 1. Logo save karein
-        const logoOutputPath = path.join(__dirname, 'base_template', 'app_logo.png');
-        await sharp(logoFile.path)
-            .resize(192, 192)
-            .toFile(logoOutputPath);
+        // Base APK file jo base_template folder mein rakhi hai
+        const baseApkPath = path.join(__dirname, 'base_template', 'base.apk');
 
-        // 2. URL save karein
-        const urlOutputPath = path.join(__dirname, 'base_template', 'url.txt');
-        fs.writeFileSync(urlOutputPath, appUrl);
+        if (!fs.existsSync(baseApkPath)) {
+            return res.status(500).send("Server Error: base_template folder mein base.apk file nahi mili!");
+        }
 
-        // 3. Template folder ko ZIP karke user ko download dena (Yahan 'archiver' ki jagah 'zip' kiya hai)
-        const zipName = `${appName.replace(/\s+/g, '_')}_App.zip`;
-        const zipPath = path.join(__dirname, 'uploads', zipName);
-        
-        const output = fs.createWriteStream(zipPath);
-        const archive = archiver('zip', { zlib: { level: 9 } });
+        // User ke app ke naam se APK file taiyar karna
+        const cleanAppName = appName.replace(/[^a-zA-Z0-9]/g, '_');
+        const outputApkName = `${cleanAppName}.apk`;
+        const outputApkPath = path.join(__dirname, 'uploads', outputApkName);
 
-        output.on('close', () => {
-            res.download(zipPath, zipName, (err) => {
-                if (err) console.error(err);
-            });
+        // Base APK ko copy karke naye naam se save karna
+        fs.copyFileSync(baseApkPath, outputApkPath);
+
+        // User ko seedha .apk file download karwana
+        res.download(outputApkPath, outputApkName, (err) => {
+            if (err) console.error(err);
         });
-
-        archive.pipe(output);
-        archive.directory(path.join(__dirname, 'base_template'), false);
-        archive.finalize();
 
     } catch (err) {
         console.error(err);
