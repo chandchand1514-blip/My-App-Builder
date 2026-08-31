@@ -22,10 +22,12 @@ jobs:
           mkdir -p app/src/main/java/com/myapp
           mkdir -p app/src/main/res/values
           
-          echo "include ':app'" > settings.gradle
-          
           echo "buildscript { repositories { google(); mavenCentral() } dependencies { classpath 'com.android.tools.build:gradle:8.1.0' } }" > build.gradle
           echo "allprojects { repositories { google(); mavenCentral() } }" >> build.gradle
+          
+          cat << 'EOF' > settings.gradle
+          include ':app'
+          EOF
           
           cat << 'EOF' > app/build.gradle
           plugins { id 'com.android.application' }
