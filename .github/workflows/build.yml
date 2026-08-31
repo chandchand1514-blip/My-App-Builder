@@ -22,19 +22,35 @@ jobs:
           mkdir -p app/src/main/java/com/myapp
           mkdir -p app/src/main/res/values
           
-          echo "buildscript { repositories { google(); mavenCentral() } dependencies { classpath 'com.android.tools.build:gradle:8.1.0' } }" > build.gradle
-          echo "allprojects { repositories { google(); mavenCentral() } }" >> build.gradle
-          
           cat << 'EOF' > settings.gradle
           include ':app'
           EOF
           
           cat << 'EOF' > app/build.gradle
-          plugins { id 'com.android.application' }
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.1.0'
+              }
+          }
+          apply plugin: 'com.android.application'
           android {
               namespace 'com.myapp'
               compileSdk 34
-              defaultConfig { applicationId "com.myapp"; minSdk 21; targetSdk 34; versionCode 1; versionName "1.0" }
+              defaultConfig {
+                  applicationId "com.myapp"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+          }
+          repositories {
+              google()
+              mavenCentral()
           }
           EOF
           
@@ -89,3 +105,4 @@ jobs:
         with:
           name: ${{ github.event.client_payload.appName }}-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+          
