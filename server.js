@@ -37,7 +37,7 @@ app.post('/build', async (req, res) => {
             method: 'POST',
             headers: {
                 'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${GITHUB_TOKEN}`
+                'Authorization': \`token \${GITHUB_TOKEN}\`
             },
             body: JSON.stringify({
                 event_type: 'build-app',
@@ -49,16 +49,16 @@ app.post('/build', async (req, res) => {
         });
 
         if (response.ok) {
-            res.send(`<h3>✅ App banne ka order GitHub ko successfully chala gaya hai!</h3><p>Apne GitHub "Actions" tab mein jakar dekhein.</p>`);
+            res.send(\`<h3>✅ App banne ka order GitHub ko successfully chala gaya hai!</h3><p>Apne GitHub "Actions" tab mein jakar dekhein.</p>\`);
         } else {
             const errorData = await response.text();
-            res.send(`<h3>❌ Kuch galti hui:</h3><p>${errorData}</p>`);
+            res.send(\`<h3>❌ Kuch galti hui:</h3><p>\${errorData}</p>\`);
         }
     } catch (error) {
-        res.send(`<h3>❌ Server Error:</h3><p>${error.message}</p>`);
+        res.send(\`<h3>❌ Server Error:</h3><p>\${error.message}</p>\`);
     }
 });
 
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(\`Server is running on port \${port}\`);
 });
