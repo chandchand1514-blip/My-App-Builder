@@ -28,6 +28,10 @@ jobs:
         with:
           gradle-version: '8.4'
 
+      # NAYA STEP: Photo converter software install karna
+      - name: Install Image Converter
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
       - name: Generate Master App Code
         run: |
           PKG="${{ github.event.client_payload.config.packageName }}"
@@ -41,7 +45,6 @@ jobs:
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/assets
           
-          # NAYA: Image Converter (Auto fix for JPG to PNG)
           curl -L "${{ github.event.client_payload.appIconUrl }}" -o temp_icon.img
           convert temp_icon.img -resize 512x512 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
