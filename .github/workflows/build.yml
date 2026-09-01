@@ -11,7 +11,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # This is the missing step! It tells GitHub to work inside your repository.
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -57,7 +56,22 @@ jobs:
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <!-- ALL MASTER PERMISSIONS ADDED -->
               <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+              <uses-permission android:name="android.permission.VIBRATE" />
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+              
+              <uses-feature android:name="android.hardware.camera" android:required="false" />
+              <uses-feature android:name="android.hardware.microphone" android:required="false" />
+              
               <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
                   <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
@@ -75,17 +89,63 @@ jobs:
           
           cat << EOF > app/src/main/java/com/myapp/MainActivity.java
           package com.myapp;
-          import android.app.Activity; import android.os.Bundle; import android.webkit.WebSettings; import android.webkit.WebView; import android.webkit.WebViewClient;
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.webkit.GeolocationPermissions;
+          import android.webkit.PermissionRequest;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          
           public class MainActivity extends Activity {
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+                  
+                  // Ask for all dangerous permissions at runtime
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                      String[] permissions = {
+                          Manifest.permission.RECORD_AUDIO,
+                          Manifest.permission.CAMERA,
+                          Manifest.permission.ACCESS_FINE_LOCATION,
+                          "android.permission.POST_NOTIFICATIONS"
+                      };
+                      requestPermissions(permissions, 1);
+                  }
+                  
                   WebView webView = new WebView(this);
                   setContentView(webView);
                   WebSettings webSettings = webView.getSettings();
                   webSettings.setJavaScriptEnabled(true);
                   webSettings.setDomStorageEnabled(true);
+                  webSettings.setMediaPlaybackRequiresUserGesture(false);
+                  webSettings.setGeolocationEnabled(true);
+                  webSettings.setAllowFileAccess(true);
+                  
                   webView.setWebViewClient(new WebViewClient());
+                  
+                  // Auto-grant permissions for websites (Mic, Camera, Location)
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onPermissionRequest(final PermissionRequest request) {
+                          runOnUiThread(new Runnable() {
+                              @Override
+                              public void run() {
+                                  request.grant(request.getResources());
+                              }
+                          });
+                      }
+                      
+                      @Override
+                      public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                          callback.invoke(origin, true, false);
+                      }
+                  });
+                  
                   webView.loadUrl("${{ github.event.client_payload.appUrl }}");
               }
           }
@@ -98,4 +158,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Aapka App taiyar hai."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Aapka Master App taiyar hai."
