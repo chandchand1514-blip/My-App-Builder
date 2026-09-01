@@ -17,6 +17,12 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # Yeh naya step GitHub ko stable version use karne ko bolega
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.4'
+
       - name: Generate App Code and Logo
         run: |
           mkdir -p app/src/main/java/com/myapp
