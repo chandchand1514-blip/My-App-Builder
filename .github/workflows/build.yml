@@ -28,12 +28,18 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Generate App Code and Logo
+      - name: Generate Master App Code
         run: |
-          mkdir -p app/src/main/java/com/myapp
+          # Package name set karna (agar khali ho toh default use hoga)
+          PKG="${{ github.event.client_payload.packageName }}"
+          if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
+          PKG_DIR=$(echo $PKG | tr '.' '/')
+
+          mkdir -p app/src/main/java/$PKG_DIR
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/mipmap-xxxhdpi
+          mkdir -p app/src/main/assets
           
           curl -L "${{ github.event.client_payload.appLogoUrl }}" -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
@@ -49,19 +55,35 @@ jobs:
           plugins { id 'com.android.application' version '8.1.0' apply false }
           EOF
           
-          cat << 'EOF' > app/build.gradle
+          cat << EOF > app/build.gradle
           plugins { id 'com.android.application' }
-          android { namespace 'com.myapp'; compileSdk 34; defaultConfig { applicationId "com.myapp"; minSdk 21; targetSdk 34; versionCode 1; versionName "1.0" } }
+          android { 
+              namespace '$PKG'
+              compileSdk 34
+              defaultConfig { 
+                  applicationId "$PKG"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              } 
+          }
+          dependencies {
+              implementation 'com.google.android.gms:play-services-ads:22.6.0'
+              implementation 'com.onesignal:OneSignal:5.0.3'
+          }
           EOF
           
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          cat << EOF > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.RECORD_AUDIO" />
               <uses-permission android:name="android.permission.CAMERA" />
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${{ github.event.client_payload.admobAppId }}"/>
                   <activity android:name=".SplashActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -77,53 +99,79 @@ jobs:
           <resources><string name="app_name">${{ github.event.client_payload.appName }}</string></resources>
           EOF
           
-          # YAHAN COLOR DYNAMIC HO GAYA HAI
+          # No Internet Page HTML
+          cat << 'EOF' > app/src/main/assets/no_internet.html
+          <html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;text-align:center;background:#f8f9fa;">
+          <div><h1 style="color:#d35400;">No Internet</h1><p>Kripya apna internet connection check karein aur app dobara kholen.</p></div>
+          </body></html>
+          EOF
+          
           cat << EOF > app/src/main/res/layout/activity_splash.xml
           <?xml version="1.0" encoding="utf-8"?>
           <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
-              android:background="${{ github.event.client_payload.splashColor }}">
-              <ImageView
-                  android:layout_width="150dp"
-                  android:layout_height="150dp"
-                  android:layout_centerInParent="true"
-                  android:src="@mipmap/ic_launcher" />
+              android:layout_width="match_parent" android:layout_height="match_parent" android:background="${{ github.event.client_payload.splashColor }}">
+              <ImageView android:layout_width="150dp" android:layout_height="150dp" android:layout_centerInParent="true" android:src="@mipmap/ic_launcher" />
           </RelativeLayout>
           EOF
           
-          cat << EOF > app/src/main/java/com/myapp/SplashActivity.java
-          package com.myapp;
+          cat << EOF > app/src/main/res/layout/activity_main.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:ads="http://schemas.android.com/apk/res-auto"
+              android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="${{ github.event.client_payload.themeColor }}">
+              <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+              <com.google.android.gms.ads.AdView
+                  android:id="@+id/adView" android:layout_width="match_parent" android:layout_height="wrap_content"
+                  ads:adSize="BANNER" ads:adUnitId="${{ github.event.client_payload.admobBannerId }}" />
+          </LinearLayout>
+          EOF
+          
+          cat << EOF > app/src/main/java/$PKG_DIR/SplashActivity.java
+          package $PKG;
           import android.app.Activity; import android.content.Intent; import android.os.Bundle; import android.os.Handler; import android.os.Looper;
           public class SplashActivity extends Activity {
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  setContentView(R.layout.activity_splash);
-                  new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                      @Override
-                      public void run() {
-                          startActivity(new Intent(SplashActivity.this, MainActivity.class));
-                          finish();
-                      }
+              @Override protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState); setContentView(R.layout.activity_splash);
+                  new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                      startActivity(new Intent(SplashActivity.this, MainActivity.class)); finish();
                   }, 2500);
               }
           }
           EOF
           
-          cat << EOF > app/src/main/java/com/myapp/MainActivity.java
-          package com.myapp;
+          cat << EOF > app/src/main/java/$PKG_DIR/MainActivity.java
+          package $PKG;
           import android.Manifest; import android.app.Activity; import android.content.pm.PackageManager; import android.os.Build; import android.os.Bundle; import android.webkit.GeolocationPermissions; import android.webkit.PermissionRequest; import android.webkit.WebChromeClient; import android.webkit.WebSettings; import android.webkit.WebView; import android.webkit.WebViewClient; import java.util.ArrayList; import java.util.List;
+          import com.google.android.gms.ads.MobileAds; import com.google.android.gms.ads.AdRequest; import com.google.android.gms.ads.AdView;
+          import com.onesignal.OneSignal;
+          import android.net.ConnectivityManager; import android.net.NetworkInfo; import android.content.Context;
+          
           public class MainActivity extends Activity {
               private PermissionRequest mPermissionRequest; private GeolocationPermissions.Callback mGeoCallback; private String mGeoOrigin;
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
+              @Override protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  WebView webView = new WebView(this);
-                  setContentView(webView);
+                  setContentView(R.layout.activity_main);
+                  
+                  // OneSignal Init
+                  OneSignal.initWithContext(this, "${{ github.event.client_payload.onesignalAppId }}");
+                  
+                  // AdMob Init
+                  MobileAds.initialize(this, initializationStatus -> {});
+                  AdView mAdView = findViewById(R.id.adView);
+                  AdRequest adRequest = new AdRequest.Builder().build();
+                  mAdView.loadAd(adRequest);
+
+                  WebView webView = findViewById(R.id.webview);
                   WebSettings webSettings = webView.getSettings();
                   webSettings.setJavaScriptEnabled(true); webSettings.setDomStorageEnabled(true); webSettings.setMediaPlaybackRequiresUserGesture(false); webSettings.setGeolocationEnabled(true);
-                  webView.setWebViewClient(new WebViewClient());
+                  
+                  // No Internet Page Handle
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                          view.loadUrl("file:///android_asset/no_internet.html");
+                      }
+                  });
+
                   webView.setWebChromeClient(new WebChromeClient() {
                       @Override public void onPermissionRequest(final PermissionRequest request) {
                           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -147,7 +195,14 @@ jobs:
                           } else { callback.invoke(origin, true, false); }
                       }
                   });
-                  webView.loadUrl("${{ github.event.client_payload.appUrl }}");
+                  
+                  ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                  NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                  if (activeNetwork != null && activeNetwork.isConnectedOrConnecting()) {
+                      webView.loadUrl("${{ github.event.client_payload.appUrl }}");
+                  } else {
+                      webView.loadUrl("file:///android_asset/no_internet.html");
+                  }
               }
               @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
                   if (requestCode == 101 && mPermissionRequest != null) {
@@ -171,4 +226,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Custom Color Splash Screen wala App taiyar hai."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Master Version (6-in-1 Features) App taiyar hai."
