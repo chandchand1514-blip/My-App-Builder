@@ -30,7 +30,6 @@ jobs:
 
       - name: Generate Master App Code
         run: |
-          # Package name set karna (agar khali ho toh default use hoga)
           PKG="${{ github.event.client_payload.packageName }}"
           if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
           PKG_DIR=$(echo $PKG | tr '.' '/')
@@ -39,10 +38,15 @@ jobs:
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/mipmap-xxxhdpi
+          mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/assets
           
-          curl -L "${{ github.event.client_payload.appLogoUrl }}" -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          # 1. Bahar ka App Icon Download karna
+          curl -L "${{ github.event.client_payload.appIconUrl }}" -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          
+          # 2. Andar ka Splash Screen Logo Download karna
+          curl -L "${{ github.event.client_payload.splashLogoUrl }}" -o app/src/main/res/drawable/splash_logo.png
           
           cat << 'EOF' > settings.gradle
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
@@ -99,19 +103,25 @@ jobs:
           <resources><string name="app_name">${{ github.event.client_payload.appName }}</string></resources>
           EOF
           
-          # No Internet Page HTML
           cat << 'EOF' > app/src/main/assets/no_internet.html
           <html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;text-align:center;background:#f8f9fa;">
           <div><h1 style="color:#d35400;">No Internet</h1><p>Kripya apna internet connection check karein aur app dobara kholen.</p></div>
           </body></html>
           EOF
           
+          # NAYA: Yahan Splash Screen mein ab 'splash_logo.png' lag raha hai
           cat << EOF > app/src/main/res/layout/activity_splash.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent" android:layout_height="match_parent" android:background="${{ github.event.client_payload.splashColor }}">
-              <ImageView android:layout_width="150dp" android:layout_height="150dp" android:layout_centerInParent="true" android:src="@mipmap/ic_launcher" />
-          </RelativeLayout>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent" android:layout_height="match_parent" 
+              android:orientation="vertical" android:gravity="center"
+              android:background="${{ github.event.client_payload.splashColor }}">
+              <ImageView android:layout_width="150dp" android:layout_height="150dp" android:src="@drawable/splash_logo" />
+              <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" 
+                  android:text="@string/app_name" android:textSize="28sp" android:textStyle="bold" 
+                  android:textColor="#FFFFFF" android:shadowColor="#000000" android:shadowDx="2" android:shadowDy="2" android:shadowRadius="5"
+                  android:layout_marginTop="20dp"/>
+          </LinearLayout>
           EOF
           
           cat << EOF > app/src/main/res/layout/activity_main.xml
@@ -152,10 +162,8 @@ jobs:
                   super.onCreate(savedInstanceState);
                   setContentView(R.layout.activity_main);
                   
-                  // OneSignal Init
                   OneSignal.initWithContext(this, "${{ github.event.client_payload.onesignalAppId }}");
                   
-                  // AdMob Init
                   MobileAds.initialize(this, initializationStatus -> {});
                   AdView mAdView = findViewById(R.id.adView);
                   AdRequest adRequest = new AdRequest.Builder().build();
@@ -165,7 +173,6 @@ jobs:
                   WebSettings webSettings = webView.getSettings();
                   webSettings.setJavaScriptEnabled(true); webSettings.setDomStorageEnabled(true); webSettings.setMediaPlaybackRequiresUserGesture(false); webSettings.setGeolocationEnabled(true);
                   
-                  // No Internet Page Handle
                   webView.setWebViewClient(new WebViewClient() {
                       @Override public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                           view.loadUrl("file:///android_asset/no_internet.html");
@@ -226,4 +233,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Master Version (6-in-1 Features) App taiyar hai."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Dono Logos ke sath App taiyar hai."
