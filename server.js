@@ -38,7 +38,6 @@ app.get('/', (req, res) => {
             <input type='file' name='splashLogo' accept='image/*' required style='margin:8px 0 15px 0; width: 100%;'><br>
             
             <hr style='border: 1px solid #eee; margin: 20px 0;'>
-            
             <h3 style='margin-top: 0; color: #2980b9;'>⚙️ Advanced Settings</h3>
             
             <label style='font-weight: bold; color: #555; display: flex; align-items: center; justify-content: space-between;'>
@@ -98,13 +97,20 @@ app.post('/build', cpUpload, async (req, res) => {
             body: JSON.stringify({
                 event_type: 'build-app',
                 client_payload: { 
-                    appName: appName, appUrl: appUrl, 
-                    appIconUrl: iconUrl, splashLogoUrl: splashUrl, 
+                    appName: appName, 
+                    appUrl: appUrl, 
+                    appIconUrl: iconUrl, 
+                    splashLogoUrl: splashUrl, 
                     buildId: buildId,
-                    splashColor: splashColor || '#FFFFFF', 
-                    themeColor: themeColor || '#FFFFFF', 
-                    admobAppId: finalAdAppId, admobBannerId: finalAdBannerId,
-                    packageName: finalPackageName, onesignalAppId: finalOneSignalId
+                    // NAYA: 10 ki limit bypass karne ke liye config group
+                    config: {
+                        splashColor: splashColor || '#FFFFFF', 
+                        themeColor: themeColor || '#FFFFFF', 
+                        admobAppId: finalAdAppId, 
+                        admobBannerId: finalAdBannerId,
+                        packageName: finalPackageName, 
+                        onesignalAppId: finalOneSignalId
+                    }
                 }
             })
         });
@@ -133,7 +139,7 @@ app.post('/build', cpUpload, async (req, res) => {
                 </script>
             </body></html>
             `);
-        } else { res.send("<h3>❌ API Error.</h3>"); }
+        } else { res.send("<h3>❌ API Error. GitHub Limit Cross Ho Gayi.</h3>"); }
     } catch (error) { res.send("<h3>❌ Error: " + error.message + "</h3>"); }
 });
 
