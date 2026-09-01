@@ -10,7 +10,7 @@ if (!fs.existsSync(dir)){ fs.mkdirSync(dir, { recursive: true }); }
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) { cb(null, 'public/logos/') },
-    filename: function (req, file, cb) { cb(null, Date.now() + path.extname(file.originalname)) }
+    filename: function (req, file, cb) { cb(null, Date.now() + '-' + file.fieldname + path.extname(file.originalname)) }
 });
 const upload = multer({ storage: storage });
 
@@ -31,8 +31,11 @@ app.get('/', (req, res) => {
             <label style='font-weight: bold; color: #333;'>Website Link:</label><br>
             <input type='url' name='appUrl' placeholder='https://...' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
             
-            <label style='font-weight: bold; color: #333;'>App Logo (Image):</label><br>
-            <input type='file' name='appLogo' accept='image/*' required style='margin:8px 0 15px 0; width: 100%;'><br>
+            <label style='font-weight: bold; color: #d35400;'>1. App Icon (Bahar ka photo):</label><br>
+            <input type='file' name='appIcon' accept='image/*' required style='margin:8px 0 15px 0; width: 100%;'><br>
+
+            <label style='font-weight: bold; color: #d35400;'>2. Splash Screen Logo (Andar ka photo):</label><br>
+            <input type='file' name='splashLogo' accept='image/*' required style='margin:8px 0 15px 0; width: 100%;'><br>
             
             <hr style='border: 1px solid #eee; margin: 20px 0;'>
             
@@ -66,10 +69,11 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.post('/build', upload.single('appLogo'), async (req, res) => {
+const cpUpload = upload.fields([{ name: 'appIcon', maxCount: 1 }, { name: 'splashLogo', maxCount: 1 }]);
+
+app.post('/build', cpUpload, async (req, res) => {
     const { appName, appUrl, splashColor, themeColor, packageName, onesignalAppId, admobAppId, admobBannerId } = req.body;
     
-    // Default values agar user khali chhod de
     const finalAdAppId = admobAppId || 'ca-app-pub-3940256099942544~3347511713';
     const finalAdBannerId = admobBannerId || 'ca-app-pub-3940256099942544/6300978111';
     const finalPackageName = packageName || 'com.universal.app';
@@ -80,8 +84,11 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
     const repoName = 'My-App-Builder';
     const buildId = Date.now().toString(); 
     
-    let logoUrl = '';
-    if (req.file) { logoUrl = 'https://' + req.get('host') + '/logos/' + req.file.filename; }
+    let iconUrl = '';
+    let splashUrl = '';
+    if (req.files['appIcon']) { iconUrl = 'https://' + req.get('host') + '/logos/' + req.files['appIcon'][0].filename; }
+    if (req.files['splashLogo']) { splashUrl = 'https://' + req.get('host') + '/logos/' + req.files['splashLogo'][0].filename; }
+
     const downloadUrl = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-debug.apk";
 
     try {
@@ -91,13 +98,13 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
             body: JSON.stringify({
                 event_type: 'build-app',
                 client_payload: { 
-                    appName: appName, appUrl: appUrl, appLogoUrl: logoUrl, buildId: buildId,
+                    appName: appName, appUrl: appUrl, 
+                    appIconUrl: iconUrl, splashLogoUrl: splashUrl, 
+                    buildId: buildId,
                     splashColor: splashColor || '#FFFFFF', 
                     themeColor: themeColor || '#FFFFFF', 
-                    admobAppId: finalAdAppId, 
-                    admobBannerId: finalAdBannerId,
-                    packageName: finalPackageName,
-                    onesignalAppId: finalOneSignalId
+                    admobAppId: finalAdAppId, admobBannerId: finalAdBannerId,
+                    packageName: finalPackageName, onesignalAppId: finalOneSignalId
                 }
             })
         });
