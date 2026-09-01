@@ -4,7 +4,6 @@ on:
   repository_dispatch:
     types: [build-app]
 
-# GITHUB_TOKEN ko public release link banane ki permission dena
 permissions:
   contents: write
 
@@ -12,6 +11,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # This is the missing step! It tells GitHub to work inside your repository.
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
@@ -91,7 +94,6 @@ jobs:
       - name: Build Android APK
         run: gradle assembleDebug
 
-      # NAYA STEP: APK ka open public link generate karna
       - name: Create Direct Download Link
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
