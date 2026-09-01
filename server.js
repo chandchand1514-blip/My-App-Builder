@@ -50,8 +50,8 @@ app.get('/', (req, res) => {
                 <input type="color" name="themeColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
             </label><br>
 
-            <label style='font-weight: bold; color: #555; font-size: 14px;'>Package Name (Optional):</label><br>
-            <input type='text' name='packageName' placeholder='com.aapka.app' style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <label style='font-weight: bold; color: #d35400; font-size: 14px;'>Package Name (Zaroori Hai):</label><br>
+            <input type='text' name='packageName' placeholder='com.aapka.app' required style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
 
             <label style='font-weight: bold; color: #555; font-size: 14px;'>AdMob App ID (Optional):</label><br>
             <input type='text' name='admobAppId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
@@ -75,7 +75,7 @@ app.post('/build', cpUpload, async (req, res) => {
     
     const finalAdAppId = admobAppId || 'ca-app-pub-3940256099942544~3347511713';
     const finalAdBannerId = admobBannerId || 'ca-app-pub-3940256099942544/6300978111';
-    const finalPackageName = packageName || 'com.universal.app';
+    const finalPackageName = packageName; // Ab yeh required ho gaya hai
     const finalOneSignalId = onesignalAppId || '00000000-0000-0000-0000-000000000000';
 
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -102,7 +102,6 @@ app.post('/build', cpUpload, async (req, res) => {
                     appIconUrl: iconUrl, 
                     splashLogoUrl: splashUrl, 
                     buildId: buildId,
-                    // NAYA: 10 ki limit bypass karne ke liye config group
                     config: {
                         splashColor: splashColor || '#FFFFFF', 
                         themeColor: themeColor || '#FFFFFF', 
