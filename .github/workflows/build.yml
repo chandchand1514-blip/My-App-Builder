@@ -4,6 +4,10 @@ on:
   repository_dispatch:
     types: [build-app]
 
+# GITHUB_TOKEN ko public release link banane ki permission dena
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,7 +32,6 @@ jobs:
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/mipmap-xxxhdpi
           
-          # Render se Logo download karna
           curl -L "${{ github.event.client_payload.appLogoUrl }}" -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
           
@@ -88,8 +91,9 @@ jobs:
       - name: Build Android APK
         run: gradle assembleDebug
 
-      - name: Upload Finished APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.client_payload.appName }}-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+      # NAYA STEP: APK ka open public link generate karna
+      - name: Create Direct Download Link
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Aapka App taiyar hai."
