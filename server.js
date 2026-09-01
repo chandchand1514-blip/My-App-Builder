@@ -20,12 +20,13 @@ app.use(express.static('public'));
 
 app.get('/', (req, res) => {
     res.send(`
-    <html><body style='font-family: Arial; padding: 20px; text-align: center; background: #f4f7f6;'>
-        <h2>🚀 Professional App Builder (Developer Console)</h2>
-        <form action='/build' method='POST' enctype='multipart/form-data' style='background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 350px;'>
+    <html><body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3;'>
+        <h2 style='color: #2c3e50;'>🚀 Professional App Builder (Developer Console)</h2>
+        <form action='/build' method='POST' enctype='multipart/form-data' style='background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 400px; max-width: 90%;'>
             
+            <h3 style='margin-top: 0; color: #2980b9;'>📱 Basic Info</h3>
             <label style='font-weight: bold; color: #333;'>App ka Naam:</label><br>
-            <input type='text' name='appName' placeholder='Ex: M.i Assistant' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='text' name='appName' placeholder='Ex: DesiStore' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
             
             <label style='font-weight: bold; color: #333;'>Website Link:</label><br>
             <input type='url' name='appUrl' placeholder='https://...' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
@@ -35,22 +36,45 @@ app.get('/', (req, res) => {
             
             <hr style='border: 1px solid #eee; margin: 20px 0;'>
             
-            <h3 style='margin-top: 0; color: #2c3e50; font-size: 18px;'>⚙️ Advanced Settings</h3>
+            <h3 style='margin-top: 0; color: #2980b9;'>⚙️ Advanced Settings</h3>
             
             <label style='font-weight: bold; color: #555; display: flex; align-items: center; justify-content: space-between;'>
                 Splash Screen Color:
                 <input type="color" name="splashColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
+            </label>
+            
+            <label style='font-weight: bold; color: #555; display: flex; align-items: center; justify-content: space-between; margin-top: 10px;'>
+                App Background Color:
+                <input type="color" name="themeColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
             </label><br>
 
-            <button type='submit' style='margin-top: 10px; padding:12px; background: #28a745; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0px 4px 6px rgba(40,167,69,0.3);'>🔨 App Banao</button>
+            <label style='font-weight: bold; color: #555; font-size: 14px;'>Package Name (Optional):</label><br>
+            <input type='text' name='packageName' placeholder='com.aapka.app' style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+
+            <label style='font-weight: bold; color: #555; font-size: 14px;'>AdMob App ID (Optional):</label><br>
+            <input type='text' name='admobAppId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+
+            <label style='font-weight: bold; color: #555; font-size: 14px;'>AdMob Banner ID (Optional):</label><br>
+            <input type='text' name='admobBannerId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+
+            <label style='font-weight: bold; color: #555; font-size: 14px;'>OneSignal App ID (Notifications):</label><br>
+            <input type='text' name='onesignalAppId' placeholder='UUID format...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+
+            <button type='submit' style='margin-top: 10px; padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0px 4px 6px rgba(39,174,96,0.3);'>🚀 Build Master App</button>
         </form>
     </body></html>
     `);
 });
 
 app.post('/build', upload.single('appLogo'), async (req, res) => {
-    // Form se color data bhi utha rahe hain
-    const { appName, appUrl, splashColor } = req.body;
+    const { appName, appUrl, splashColor, themeColor, packageName, onesignalAppId, admobAppId, admobBannerId } = req.body;
+    
+    // Default values agar user khali chhod de
+    const finalAdAppId = admobAppId || 'ca-app-pub-3940256099942544~3347511713';
+    const finalAdBannerId = admobBannerId || 'ca-app-pub-3940256099942544/6300978111';
+    const finalPackageName = packageName || 'com.universal.app';
+    const finalOneSignalId = onesignalAppId || '00000000-0000-0000-0000-000000000000';
+
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
     const githubUser = 'chandchand1514-blip';
     const repoName = 'My-App-Builder';
@@ -58,7 +82,6 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
     
     let logoUrl = '';
     if (req.file) { logoUrl = 'https://' + req.get('host') + '/logos/' + req.file.filename; }
-
     const downloadUrl = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-debug.apk";
 
     try {
@@ -68,22 +91,23 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
             body: JSON.stringify({
                 event_type: 'build-app',
                 client_payload: { 
-                    appName: appName, 
-                    appUrl: appUrl, 
-                    appLogoUrl: logoUrl, 
-                    buildId: buildId,
-                    splashColor: splashColor // GitHub ko color bhejna
+                    appName: appName, appUrl: appUrl, appLogoUrl: logoUrl, buildId: buildId,
+                    splashColor: splashColor || '#FFFFFF', 
+                    themeColor: themeColor || '#FFFFFF', 
+                    admobAppId: finalAdAppId, 
+                    admobBannerId: finalAdBannerId,
+                    packageName: finalPackageName,
+                    onesignalAppId: finalOneSignalId
                 }
             })
         });
 
         if (response.ok) {
             res.send(`
-            <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #f4f7f6;">
-                <h2 id="statusText" style="color: #d35400;">⏳ Aapka App Ban Raha Hai...</h2>
-                <p id="subText" style="color: #555; font-size: 18px;">Kripya 1 se 2 minute intezaar karein.</p>
+            <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #eef2f3;">
+                <h2 id="statusText" style="color: #e67e22;">⏳ Aapka Master App Ban Raha Hai...</h2>
                 <div id="loader" style="margin: 30px auto; border: 8px solid #ddd; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
-                <a id="downloadBtn" href="` + downloadUrl + `" style="display: none; padding: 15px 40px; background: #28a745; color: white; text-decoration: none; font-size: 20px; font-weight: bold; border-radius: 8px; box-shadow: 0px 4px 6px rgba(0,0,0,0.2);">⬇️ Download APK</a>
+                <a id="downloadBtn" href="` + downloadUrl + `" style="display: none; padding: 15px 40px; background: #27ae60; color: white; text-decoration: none; font-size: 20px; font-weight: bold; border-radius: 8px;">⬇️ Download APK</a>
                 <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
                 <script>
                     const checkInterval = setInterval(async () => {
@@ -93,8 +117,7 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
                             if (data.ready) {
                                 clearInterval(checkInterval);
                                 document.getElementById("statusText").innerText = "🎉 Aapka App Taiyar Hai!";
-                                document.getElementById("statusText").style.color = "green";
-                                document.getElementById("subText").innerText = "Niche button par click karke turant install karein.";
+                                document.getElementById("statusText").style.color = "#27ae60";
                                 document.getElementById("loader").style.display = "none";
                                 document.getElementById("downloadBtn").style.display = "inline-block";
                             }
