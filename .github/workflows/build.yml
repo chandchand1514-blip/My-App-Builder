@@ -30,7 +30,8 @@ jobs:
 
       - name: Generate Master App Code
         run: |
-          PKG="${{ github.event.client_payload.packageName }}"
+          # Yahan 'config.' lagaya gaya hai
+          PKG="${{ github.event.client_payload.config.packageName }}"
           if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
           PKG_DIR=$(echo $PKG | tr '.' '/')
 
@@ -41,11 +42,9 @@ jobs:
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/assets
           
-          # 1. Bahar ka App Icon Download karna
           curl -L "${{ github.event.client_payload.appIconUrl }}" -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
           
-          # 2. Andar ka Splash Screen Logo Download karna
           curl -L "${{ github.event.client_payload.splashLogoUrl }}" -o app/src/main/res/drawable/splash_logo.png
           
           cat << 'EOF' > settings.gradle
@@ -87,7 +86,7 @@ jobs:
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
-                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${{ github.event.client_payload.admobAppId }}"/>
+                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${{ github.event.client_payload.config.admobAppId }}"/>
                   <activity android:name=".SplashActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -109,13 +108,12 @@ jobs:
           </body></html>
           EOF
           
-          # NAYA: Yahan Splash Screen mein ab 'splash_logo.png' lag raha hai
           cat << EOF > app/src/main/res/layout/activity_splash.xml
           <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:layout_width="match_parent" android:layout_height="match_parent" 
               android:orientation="vertical" android:gravity="center"
-              android:background="${{ github.event.client_payload.splashColor }}">
+              android:background="${{ github.event.client_payload.config.splashColor }}">
               <ImageView android:layout_width="150dp" android:layout_height="150dp" android:src="@drawable/splash_logo" />
               <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" 
                   android:text="@string/app_name" android:textSize="28sp" android:textStyle="bold" 
@@ -128,11 +126,11 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               xmlns:ads="http://schemas.android.com/apk/res-auto"
-              android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="${{ github.event.client_payload.themeColor }}">
+              android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="${{ github.event.client_payload.config.themeColor }}">
               <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
               <com.google.android.gms.ads.AdView
                   android:id="@+id/adView" android:layout_width="match_parent" android:layout_height="wrap_content"
-                  ads:adSize="BANNER" ads:adUnitId="${{ github.event.client_payload.admobBannerId }}" />
+                  ads:adSize="BANNER" ads:adUnitId="${{ github.event.client_payload.config.admobBannerId }}" />
           </LinearLayout>
           EOF
           
@@ -162,7 +160,7 @@ jobs:
                   super.onCreate(savedInstanceState);
                   setContentView(R.layout.activity_main);
                   
-                  OneSignal.initWithContext(this, "${{ github.event.client_payload.onesignalAppId }}");
+                  OneSignal.initWithContext(this, "${{ github.event.client_payload.config.onesignalAppId }}");
                   
                   MobileAds.initialize(this, initializationStatus -> {});
                   AdView mAdView = findViewById(R.id.adView);
@@ -233,4 +231,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Dono Logos ke sath App taiyar hai."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Error Fixed App taiyar hai."
