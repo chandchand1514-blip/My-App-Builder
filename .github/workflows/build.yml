@@ -32,6 +32,7 @@ jobs:
         run: |
           mkdir -p app/src/main/java/com/myapp
           mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/mipmap-xxxhdpi
           
           curl -L "${{ github.event.client_payload.appLogoUrl }}" -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
@@ -56,7 +57,6 @@ jobs:
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <!-- Permissions File mein hain, lekin user se tabhi maangenge jab zarurat hogi -->
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.RECORD_AUDIO" />
               <uses-permission android:name="android.permission.CAMERA" />
@@ -69,18 +69,62 @@ jobs:
               <uses-feature android:name="android.hardware.microphone" android:required="false" />
               
               <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
-                  <activity android:name=".MainActivity" android:exported="true">
+                  
+                  <!-- Naya Splash Screen Activity -->
+                  <activity android:name=".SplashActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                   </activity>
+                  
+                  <!-- Main Website Activity -->
+                  <activity android:name=".MainActivity" android:exported="true" />
               </application>
           </manifest>
           EOF
           
           cat << EOF > app/src/main/res/values/strings.xml
           <resources><string name="app_name">${{ github.event.client_payload.appName }}</string></resources>
+          EOF
+          
+          cat << 'EOF' > app/src/main/res/layout/activity_splash.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:background="#FFFFFF">
+              <ImageView
+                  android:layout_width="150dp"
+                  android:layout_height="150dp"
+                  android:layout_centerInParent="true"
+                  android:src="@mipmap/ic_launcher" />
+          </RelativeLayout>
+          EOF
+          
+          cat << EOF > app/src/main/java/com/myapp/SplashActivity.java
+          package com.myapp;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.os.Bundle;
+          import android.os.Handler;
+          import android.os.Looper;
+          
+          public class SplashActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  setContentView(R.layout.activity_splash);
+                  
+                  new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                      @Override
+                      public void run() {
+                          startActivity(new Intent(SplashActivity.this, MainActivity.class));
+                          finish();
+                      }
+                  }, 2500); // 2.5 Second ka time
+              }
+          }
           EOF
           
           cat << EOF > app/src/main/java/com/myapp/MainActivity.java
@@ -119,7 +163,6 @@ jobs:
                   webView.setWebViewClient(new WebViewClient());
                   
                   webView.setWebChromeClient(new WebChromeClient() {
-                      // Jab website kisi permission (Mic/Camera) ki maang karti hai
                       @Override
                       public void onPermissionRequest(final PermissionRequest request) {
                           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -132,7 +175,6 @@ jobs:
                                       requestedPermissions.add(Manifest.permission.CAMERA);
                                   }
                               }
-                              
                               if (!requestedPermissions.isEmpty()) {
                                   boolean allGranted = true;
                                   for (String p : requestedPermissions) {
@@ -143,57 +185,39 @@ jobs:
                                   if (allGranted) {
                                       request.grant(request.getResources());
                                   } else {
-                                      // Agar allow nahi hai, toh pop-up dikhao
                                       requestPermissions(requestedPermissions.toArray(new String[0]), 101);
                                   }
-                              } else {
-                                  request.grant(request.getResources());
-                              }
-                          } else {
-                              request.grant(request.getResources());
-                          }
+                              } else { request.grant(request.getResources()); }
+                          } else { request.grant(request.getResources()); }
                       }
                       
-                      // Location maangne par pop-up
                       @Override
                       public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                               if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                                  mGeoCallback = callback;
-                                  mGeoOrigin = origin;
+                                  mGeoCallback = callback; mGeoOrigin = origin;
                                   requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 102);
-                              } else {
-                                  callback.invoke(origin, true, false);
-                              }
-                          } else {
-                              callback.invoke(origin, true, false);
-                          }
+                              } else { callback.invoke(origin, true, false); }
+                          } else { callback.invoke(origin, true, false); }
                       }
                   });
                   
                   webView.loadUrl("${{ github.event.client_payload.appUrl }}");
               }
               
-              // Pop-up mein Allow dabane ke baad app ko chalne dena
               @Override
               public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
                   if (requestCode == 101 && mPermissionRequest != null) {
                       boolean allGranted = true;
                       for (int result : grantResults) {
-                          if (result != PackageManager.PERMISSION_GRANTED) {
-                              allGranted = false; break;
-                          }
+                          if (result != PackageManager.PERMISSION_GRANTED) { allGranted = false; break; }
                       }
-                      if (allGranted) {
-                          mPermissionRequest.grant(mPermissionRequest.getResources());
-                      }
+                      if (allGranted) { mPermissionRequest.grant(mPermissionRequest.getResources()); }
                       mPermissionRequest = null;
                   } else if (requestCode == 102 && mGeoCallback != null) {
                       if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                           mGeoCallback.invoke(mGeoOrigin, true, false);
-                      } else {
-                          mGeoCallback.invoke(mGeoOrigin, false, false);
-                      }
+                      } else { mGeoCallback.invoke(mGeoOrigin, false, false); }
                       mGeoCallback = null;
                   }
               }
@@ -207,4 +231,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Aapka Master App taiyar hai."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Splash Screen wala App taiyar hai."
