@@ -30,7 +30,6 @@ jobs:
 
       - name: Generate Master App Code
         run: |
-          # Yahan 'config.' lagaya gaya hai
           PKG="${{ github.event.client_payload.config.packageName }}"
           if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
           PKG_DIR=$(echo $PKG | tr '.' '/')
@@ -42,10 +41,13 @@ jobs:
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/assets
           
-          curl -L "${{ github.event.client_payload.appIconUrl }}" -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          # NAYA: Image Converter (Auto fix for JPG to PNG)
+          curl -L "${{ github.event.client_payload.appIconUrl }}" -o temp_icon.img
+          convert temp_icon.img -resize 512x512 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
           
-          curl -L "${{ github.event.client_payload.splashLogoUrl }}" -o app/src/main/res/drawable/splash_logo.png
+          curl -L "${{ github.event.client_payload.splashLogoUrl }}" -o temp_splash.img
+          convert temp_splash.img -resize 512x512 app/src/main/res/drawable/splash_logo.png
           
           cat << 'EOF' > settings.gradle
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
@@ -73,7 +75,7 @@ jobs:
           }
           dependencies {
               implementation 'com.google.android.gms:play-services-ads:22.6.0'
-              implementation 'com.onesignal:OneSignal:5.0.3'
+              implementation 'com.onesignal:OneSignal:4.8.7'
           }
           EOF
           
@@ -160,7 +162,8 @@ jobs:
                   super.onCreate(savedInstanceState);
                   setContentView(R.layout.activity_main);
                   
-                  OneSignal.initWithContext(this, "${{ github.event.client_payload.config.onesignalAppId }}");
+                  OneSignal.initWithContext(this);
+                  OneSignal.setAppId("${{ github.event.client_payload.config.onesignalAppId }}");
                   
                   MobileAds.initialize(this, initializationStatus -> {});
                   AdView mAdView = findViewById(R.id.adView);
@@ -231,4 +234,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Error Fixed App taiyar hai."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Final App taiyar hai."
