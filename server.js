@@ -5,11 +5,9 @@ const fs = require('fs');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Photo save folder
 const dir = './public/logos';
 if (!fs.existsSync(dir)){ fs.mkdirSync(dir, { recursive: true }); }
 
-// Multer storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) { cb(null, 'public/logos/') },
     filename: function (req, file, cb) { cb(null, Date.now() + path.extname(file.originalname)) }
@@ -23,25 +21,39 @@ app.use(express.static('public'));
 app.get('/', (req, res) => {
     res.send(`
     <html><body style='font-family: Arial; padding: 20px; text-align: center; background: #f4f7f6;'>
-        <h2>🚀 Professional App Builder</h2>
-        <form action='/build' method='POST' enctype='multipart/form-data' style='background: white; padding: 20px; border-radius: 10px; display: inline-block; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);'>
-            <input type='text' name='appName' placeholder='App ka Naam' required style='padding:10px; margin:10px; width: 80%;'><br>
-            <input type='url' name='appUrl' placeholder='Website Link (https://...)' required style='padding:10px; margin:10px; width: 80%;'><br>
-            <p style='color:#555; font-weight: bold;'>App ka Logo (Image):</p>
-            <input type='file' name='appLogo' accept='image/*' required style='margin:10px;'><br><br>
-            <button type='submit' style='padding:12px 25px; background: #28a745; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold;'>🔨 App Banao</button>
+        <h2>🚀 Professional App Builder (Developer Console)</h2>
+        <form action='/build' method='POST' enctype='multipart/form-data' style='background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 350px;'>
+            
+            <label style='font-weight: bold; color: #333;'>App ka Naam:</label><br>
+            <input type='text' name='appName' placeholder='Ex: M.i Assistant' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            
+            <label style='font-weight: bold; color: #333;'>Website Link:</label><br>
+            <input type='url' name='appUrl' placeholder='https://...' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            
+            <label style='font-weight: bold; color: #333;'>App Logo (Image):</label><br>
+            <input type='file' name='appLogo' accept='image/*' required style='margin:8px 0 15px 0; width: 100%;'><br>
+            
+            <hr style='border: 1px solid #eee; margin: 20px 0;'>
+            
+            <h3 style='margin-top: 0; color: #2c3e50; font-size: 18px;'>⚙️ Advanced Settings</h3>
+            
+            <label style='font-weight: bold; color: #555; display: flex; align-items: center; justify-content: space-between;'>
+                Splash Screen Color:
+                <input type="color" name="splashColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
+            </label><br>
+
+            <button type='submit' style='margin-top: 10px; padding:12px; background: #28a745; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0px 4px 6px rgba(40,167,69,0.3);'>🔨 App Banao</button>
         </form>
     </body></html>
     `);
 });
 
 app.post('/build', upload.single('appLogo'), async (req, res) => {
-    const { appName, appUrl } = req.body;
+    // Form se color data bhi utha rahe hain
+    const { appName, appUrl, splashColor } = req.body;
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
     const githubUser = 'chandchand1514-blip';
     const repoName = 'My-App-Builder';
-    
-    // Har app order ke liye ek unique ID
     const buildId = Date.now().toString(); 
     
     let logoUrl = '';
@@ -52,13 +64,16 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
     try {
         const response = await fetch("https://api.github.com/repos/" + githubUser + "/" + repoName + "/dispatches", {
             method: 'POST',
-            headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': "token " + GITHUB_TOKEN
-            },
+            headers: { 'Accept': 'application/vnd.github.v3+json', 'Authorization': "token " + GITHUB_TOKEN },
             body: JSON.stringify({
                 event_type: 'build-app',
-                client_payload: { appName: appName, appUrl: appUrl, appLogoUrl: logoUrl, buildId: buildId }
+                client_payload: { 
+                    appName: appName, 
+                    appUrl: appUrl, 
+                    appLogoUrl: logoUrl, 
+                    buildId: buildId,
+                    splashColor: splashColor // GitHub ko color bhejna
+                }
             })
         });
 
@@ -66,14 +81,10 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
             res.send(`
             <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #f4f7f6;">
                 <h2 id="statusText" style="color: #d35400;">⏳ Aapka App Ban Raha Hai...</h2>
-                <p id="subText" style="color: #555; font-size: 18px;">Kripya 1 se 2 minute intezaar karein. Is page ko band na karein.</p>
-                
+                <p id="subText" style="color: #555; font-size: 18px;">Kripya 1 se 2 minute intezaar karein.</p>
                 <div id="loader" style="margin: 30px auto; border: 8px solid #ddd; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
-                
                 <a id="downloadBtn" href="` + downloadUrl + `" style="display: none; padding: 15px 40px; background: #28a745; color: white; text-decoration: none; font-size: 20px; font-weight: bold; border-radius: 8px; box-shadow: 0px 4px 6px rgba(0,0,0,0.2);">⬇️ Download APK</a>
-                
-                <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
-                
+                <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
                 <script>
                     const checkInterval = setInterval(async () => {
                         try {
@@ -88,29 +99,21 @@ app.post('/build', upload.single('appLogo'), async (req, res) => {
                                 document.getElementById("downloadBtn").style.display = "inline-block";
                             }
                         } catch (e) { }
-                    }, 10000); // Har 10 second mein background mein check karega
+                    }, 10000);
                 </script>
             </body></html>
             `);
-        } else {
-            res.send("<h3>❌ API Error.</h3>");
-        }
-    } catch (error) {
-        res.send("<h3>❌ Error: " + error.message + "</h3>");
-    }
+        } else { res.send("<h3>❌ API Error.</h3>"); }
+    } catch (error) { res.send("<h3>❌ Error: " + error.message + "</h3>"); }
 });
 
-// Background link checker
 app.get('/check-status/:buildId', async (req, res) => {
     const buildId = req.params.buildId;
     const url = "https://github.com/chandchand1514-blip/My-App-Builder/releases/download/build-" + buildId + "/app-debug.apk";
     try {
         const response = await fetch(url, { method: 'HEAD' });
-        if (response.ok || response.status === 302) {
-            res.json({ ready: true });
-        } else {
-            res.json({ ready: false });
-        }
+        if (response.ok || response.status === 302) { res.json({ ready: true }); } 
+        else { res.json({ ready: false }); }
     } catch (e) { res.json({ ready: false }); }
 });
 
