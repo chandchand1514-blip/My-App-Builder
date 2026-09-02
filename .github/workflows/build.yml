@@ -33,16 +33,13 @@ jobs:
 
       - name: Generate Master App Code
         run: |
-          # 1. Package name saaf karna
           RAW_PKG="${{ github.event.client_payload.config.packageName }}"
           PKG=$(echo "$RAW_PKG" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:].')
           
-          # 2. NAYA: Agar user ne dot (.) nahi lagaya hai, toh system khud laga dega!
           if [[ "$PKG" != *"."* ]] && [ -n "$PKG" ]; then
             PKG="com.${PKG}.app"
           fi
           
-          # 3. Agar blank hai toh default use karna
           if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
           
           PKG_DIR=$(echo "$PKG" | tr '.' '/')
@@ -132,18 +129,15 @@ jobs:
           </body></html>
           EOF
           
+          # NAYA: Yahan se Text (App Name) hata diya gaya hai aur Logo bada kar diya gaya hai
           cat << EOF > app/src/main/res/layout/activity_splash.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+          <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:layout_width="match_parent" android:layout_height="match_parent" 
-              android:orientation="vertical" android:gravity="center"
               android:background="${{ github.event.client_payload.config.splashColor }}">
-              <ImageView android:layout_width="150dp" android:layout_height="150dp" android:src="@drawable/splash_logo" />
-              <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" 
-                  android:text="@string/app_name" android:textSize="28sp" android:textStyle="bold" 
-                  android:textColor="#FFFFFF" android:shadowColor="#000000" android:shadowDx="2" android:shadowDy="2" android:shadowRadius="5"
-                  android:layout_marginTop="20dp"/>
-          </LinearLayout>
+              <ImageView android:layout_width="250dp" android:layout_height="250dp" 
+                  android:layout_centerInParent="true" android:src="@drawable/splash_logo" />
+          </RelativeLayout>
           EOF
           
           cat << EOF > app/src/main/res/layout/activity_main.xml
