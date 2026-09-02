@@ -23,10 +23,9 @@ app.get('/', (req, res) => {
     <html><body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3;'>
         <h2 style='color: #2c3e50;'>🚀 Professional App Builder</h2>
         
-        <!-- NAYA: Saved Apps History Box -->
         <div style='background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; width: 400px; max-width: 90%; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); display: inline-block; text-align: left;'>
             <h3 style='margin-top: 0; color: #8e44ad;'>🔄 Aapke Purane Apps (Auto-Fill)</h3>
-            <p style='font-size: 13px; color: #555; margin-bottom: 10px;'>App update karne ke liye niche click karein. Saari details khud bhar jayengi!</p>
+            <p style='font-size: 13px; color: #555; margin-bottom: 10px;'>App update karne ke liye niche click karein.</p>
             <div id='savedAppsList'></div>
         </div>
         <br>
@@ -75,7 +74,6 @@ app.get('/', (req, res) => {
         </form>
 
         <script>
-            // NAYA JAVASCRIPT: App details save aur load karne ke liye
             function saveApp() {
                 var app = {
                     appName: document.getElementById('appName').value,
@@ -88,14 +86,8 @@ app.get('/', (req, res) => {
                     onesignalAppId: document.getElementById('onesignalAppId').value
                 };
                 var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
-                
-                // Check karega ki kya ye package name pehle se hai
                 var existingIndex = apps.findIndex(a => a.packageName === app.packageName);
-                if(existingIndex >= 0) {
-                    apps[existingIndex] = app; // Update old entry
-                } else {
-                    apps.push(app); // Save new entry
-                }
+                if(existingIndex >= 0) { apps[existingIndex] = app; } else { apps.push(app); }
                 localStorage.setItem('myBuilderApps', JSON.stringify(apps));
             }
 
@@ -103,16 +95,14 @@ app.get('/', (req, res) => {
                 var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
                 var container = document.getElementById('savedAppsList');
                 if(apps.length === 0) {
-                    container.innerHTML = '<p style="color:#e74c3c; font-size:14px; font-weight:bold;">Abhi tak koi app save nahi hai. Apna pehla app banayein!</p>';
+                    container.innerHTML = '<p style="color:#e74c3c; font-size:14px; font-weight:bold;">Abhi tak koi app save nahi hai.</p>';
                     return;
                 }
                 container.innerHTML = '';
                 apps.forEach(function(app) {
                     var btn = document.createElement('div');
                     btn.innerHTML = '<b>📱 ' + app.appName + '</b><br><small style="color:#ddd;">' + app.packageName + '</small>';
-                    btn.style = 'background: #34495e; color: white; padding: 10px; margin: 5px; border-radius: 6px; cursor: pointer; display: inline-block; text-align: center; border: 2px solid transparent; transition: 0.2s;';
-                    
-                    // Button click karne par Auto-Fill
+                    btn.style = 'background: #34495e; color: white; padding: 10px; margin: 5px; border-radius: 6px; cursor: pointer; display: inline-block; text-align: center;';
                     btn.onclick = function() {
                         document.getElementById('appName').value = app.appName;
                         document.getElementById('appUrl').value = app.appUrl;
@@ -122,7 +112,7 @@ app.get('/', (req, res) => {
                         document.getElementById('admobAppId').value = app.admobAppId || '';
                         document.getElementById('admobBannerId').value = app.admobBannerId || '';
                         document.getElementById('onesignalAppId').value = app.onesignalAppId || '';
-                        alert(app.appName + ' ki details form mein bhar di gayi hain! Bas photos select karein aur Build dabayein.');
+                        alert('Details auto-fill ho gayi hain!');
                     };
                     container.appendChild(btn);
                 });
@@ -148,12 +138,11 @@ app.post('/build', cpUpload, async (req, res) => {
     const repoName = 'My-App-Builder';
     const buildId = Date.now().toString(); 
     
-    let iconUrl = '';
-    let splashUrl = '';
+    let iconUrl = ''; let splashUrl = '';
     if (req.files['appIcon']) { iconUrl = 'https://' + req.get('host') + '/logos/' + req.files['appIcon'][0].filename; }
     if (req.files['splashLogo']) { splashUrl = 'https://' + req.get('host') + '/logos/' + req.files['splashLogo'][0].filename; }
 
-    const downloadUrl = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-debug.apk"; // Ya app-release.apk
+    const downloadUrl = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-release.apk";
 
     try {
         const response = await fetch("https://api.github.com/repos/" + githubUser + "/" + repoName + "/dispatches", {
@@ -162,19 +151,8 @@ app.post('/build', cpUpload, async (req, res) => {
             body: JSON.stringify({
                 event_type: 'build-app',
                 client_payload: { 
-                    appName: appName, 
-                    appUrl: appUrl, 
-                    appIconUrl: iconUrl, 
-                    splashLogoUrl: splashUrl, 
-                    buildId: buildId,
-                    config: {
-                        splashColor: splashColor || '#FFFFFF', 
-                        themeColor: themeColor || '#FFFFFF', 
-                        admobAppId: finalAdAppId, 
-                        admobBannerId: finalAdBannerId,
-                        packageName: finalPackageName, 
-                        onesignalAppId: finalOneSignalId
-                    }
+                    appName: appName, appUrl: appUrl, appIconUrl: iconUrl, splashLogoUrl: splashUrl, buildId: buildId,
+                    config: { splashColor: splashColor || '#FFFFFF', themeColor: themeColor || '#FFFFFF', admobAppId: finalAdAppId, admobBannerId: finalAdBannerId, packageName: finalPackageName, onesignalAppId: finalOneSignalId }
                 }
             })
         });
@@ -184,23 +162,41 @@ app.post('/build', cpUpload, async (req, res) => {
             <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #eef2f3;">
                 <h2 id="statusText" style="color: #e67e22;">⏳ Aapka Master App Ban Raha Hai...</h2>
                 <div id="loader" style="margin: 30px auto; border: 8px solid #ddd; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
-                
-                <!-- NAYA: Auto-save success message -->
-                <p style="color: #7f8c8d; font-size: 14px;">(Aapke App ki details history mein save ho gayi hain)</p>
-                
+                <div id="errorBox" style="display:none; background: #ffdddd; color: #d32f2f; padding: 15px; border-radius: 8px; margin: 20px auto; width: 80%; max-width: 500px; font-weight: bold; border: 1px solid #d32f2f;"></div>
                 <a id="downloadBtn" href="` + downloadUrl + `" style="display: none; padding: 15px 40px; background: #27ae60; color: white; text-decoration: none; font-size: 20px; font-weight: bold; border-radius: 8px;">⬇️ Download APK</a>
                 <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+                
                 <script>
+                    let attempts = 0;
                     const checkInterval = setInterval(async () => {
+                        attempts++;
+                        if (attempts > 35) { // ~6 min timeout
+                            clearInterval(checkInterval);
+                            document.getElementById("statusText").innerText = "⚠️ Timeout Error!";
+                            document.getElementById("statusText").style.color = "#d32f2f";
+                            document.getElementById("loader").style.display = "none";
+                            document.getElementById("errorBox").style.display = "block";
+                            document.getElementById("errorBox").innerText = "Server bohot slow hai ya hang ho gaya hai. Kripya page refresh karke dobara try karein.";
+                            return;
+                        }
+                        
                         try {
                             const res = await fetch("/check-status/` + buildId + `");
                             const data = await res.json();
+                            
                             if (data.ready) {
                                 clearInterval(checkInterval);
                                 document.getElementById("statusText").innerText = "🎉 Aapka App Taiyar Hai!";
                                 document.getElementById("statusText").style.color = "#27ae60";
                                 document.getElementById("loader").style.display = "none";
                                 document.getElementById("downloadBtn").style.display = "inline-block";
+                            } else if (data.failed) {
+                                clearInterval(checkInterval);
+                                document.getElementById("statusText").innerText = "❌ Build Fail Ho Gayi!";
+                                document.getElementById("statusText").style.color = "#d32f2f";
+                                document.getElementById("loader").style.display = "none";
+                                document.getElementById("errorBox").style.display = "block";
+                                document.getElementById("errorBox").innerText = data.reason;
                             }
                         } catch (e) { }
                     }, 10000);
@@ -213,19 +209,46 @@ app.post('/build', cpUpload, async (req, res) => {
 
 app.get('/check-status/:buildId', async (req, res) => {
     const buildId = req.params.buildId;
-    // Release APK URL check karega (Kyunki humne pichle script mein assembleRelease kar diya tha)
-    const url = "https://github.com/chandchand1514-blip/My-App-Builder/releases/download/build-" + buildId + "/app-release.apk";
+    const githubUser = 'chandchand1514-blip';
+    const repoName = 'My-App-Builder';
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
+    const urlRelease = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-release.apk";
+    
     try {
-        const response = await fetch(url, { method: 'HEAD' });
-        if (response.ok || response.status === 302) { res.json({ ready: true }); } 
-        else { 
-            // Fallback for debug apk just in case
-            const urlDebug = "https://github.com/chandchand1514-blip/My-App-Builder/releases/download/build-" + buildId + "/app-debug.apk";
-            const responseDebug = await fetch(urlDebug, { method: 'HEAD' });
-            if (responseDebug.ok || responseDebug.status === 302) { res.json({ ready: true }); }
-            else { res.json({ ready: false }); }
+        // 1. Pehle check karo ki APK ban gaya ya nahi (Success Check)
+        const response = await fetch(urlRelease, { method: 'HEAD' });
+        if (response.ok || response.status === 302) { 
+            return res.json({ ready: true, failed: false }); 
         }
-    } catch (e) { res.json({ ready: false }); }
+
+        // 2. Agar nahi bana, toh GitHub API se pucho ki kya Build Fail hui hai? (Error Check)
+        if (GITHUB_TOKEN) {
+            const runsUrl = "https://api.github.com/repos/" + githubUser + "/" + repoName + "/actions/runs?event=repository_dispatch&per_page=3";
+            const runsRes = await fetch(runsUrl, {
+                headers: { 'Accept': 'application/vnd.github.v3+json', 'Authorization': "token " + GITHUB_TOKEN, 'User-Agent': 'AppBuilder-Node' }
+            });
+            
+            if (runsRes.ok) {
+                const runsData = await runsRes.json();
+                if (runsData.workflow_runs && runsData.workflow_runs.length > 0) {
+                    const latestRun = runsData.workflow_runs[0]; // Sabse latest build
+                    if (latestRun.status === 'completed' && latestRun.conclusion === 'failure') {
+                        return res.json({ 
+                            ready: false, 
+                            failed: true, 
+                            reason: "Karan (Reason): GitHub engine photo ko process nahi kar paaya ya settings galat hain. Kripya doosri photo ke sath dobara try karein." 
+                        });
+                    }
+                }
+            }
+        }
+        
+        // 3. Agar fail nahi hui aur bani bhi nahi hai, toh abhi process chal raha hai
+        res.json({ ready: false, failed: false });
+    } catch (e) { 
+        res.json({ ready: false, failed: false }); 
+    }
 });
 
 app.listen(port, () => { console.log("Server running on port " + port); });
