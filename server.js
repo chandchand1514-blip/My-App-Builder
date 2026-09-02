@@ -23,119 +23,103 @@ app.get('/', (req, res) => {
     <html><head>
     <style>
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        
-        /* Professional Custom Notification (Toast) */
-        #toast {
-            visibility: hidden; min-width: 280px; background-color: #333; color: #fff;
-            text-align: center; border-radius: 8px; padding: 16px; position: fixed;
-            z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%);
-            box-shadow: 0px 5px 15px rgba(0,0,0,0.3); font-size: 16px; font-weight: bold;
-        }
+        #toast { visibility: hidden; min-width: 280px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); box-shadow: 0px 5px 15px rgba(0,0,0,0.3); font-size: 16px; font-weight: bold; }
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-        
-        /* App Card Styling */
-        .app-card {
-            background: #2c3e50; color: white; padding: 12px 15px; margin: 6px; 
-            border-radius: 8px; cursor: pointer; display: inline-block; 
-            text-align: left; position: relative; min-width: 160px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;
-        }
+        .app-card { background: #2c3e50; color: white; padding: 12px 15px; margin: 6px; border-radius: 8px; cursor: pointer; display: inline-block; text-align: left; position: relative; min-width: 160px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
         .app-card:hover { transform: scale(1.02); }
-        .del-btn {
-            position: absolute; top: 10px; right: 10px; background: #e74c3c; 
-            color: white; border-radius: 50%; width: 24px; height: 24px; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 12px; transition: 0.3s;
-        }
+        .del-btn { position: absolute; top: 10px; right: 10px; background: #e74c3c; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: 0.3s; }
         .del-btn:hover { background: #c0392b; }
+        .panel { background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 400px; max-width: 90%; margin-bottom: 20px; vertical-align: top; margin-right: 15px; }
     </style>
     </head>
     <body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3; margin:0;'>
-        <h2 style='color: #2c3e50;'>🚀 Professional App Builder</h2>
+        <h2 style='color: #2c3e50;'>🚀 Professional App Builder & Manager</h2>
         
         <div style='background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; width: 400px; max-width: 90%; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); display: inline-block; text-align: left;'>
             <h3 style='margin-top: 0; color: #8e44ad;'>🔄 Aapke Purane Apps</h3>
-            <p style='font-size: 13px; color: #555; margin-bottom: 10px;'>Update ke liye app par click karein. Hatane ke liye 🗑️ dabayein.</p>
             <div id='savedAppsList'></div>
         </div>
         <br>
 
-        <form action='/build' method='POST' enctype='multipart/form-data' onsubmit='saveApp()' style='background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 400px; max-width: 90%;'>
+        <!-- APP BUILDER FORM -->
+        <form action='/build' method='POST' enctype='multipart/form-data' onsubmit='saveApp()' class="panel">
+            <h3 style='margin-top: 0; color: #2980b9;'>📱 Build New App</h3>
             
-            <h3 style='margin-top: 0; color: #2980b9;'>📱 Basic Info</h3>
             <label style='font-weight: bold; color: #333;'>App ka Naam:</label><br>
             <input type='text' id='appName' name='appName' placeholder='Ex: DesiStore' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
             
             <label style='font-weight: bold; color: #333;'>Website Link:</label><br>
             <input type='url' id='appUrl' name='appUrl' placeholder='https://...' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
             
-            <label style='font-weight: bold; color: #d35400;'>1. App Icon (Bahar ka photo):</label><br>
+            <label style='font-weight: bold; color: #d35400;'>1. App Icon:</label><br>
             <div style='display: flex; align-items: center; gap: 15px; margin: 8px 0 15px 0;'>
                 <input type='file' name='appIcon' accept='image/*' required style='width: 100%;' onchange='previewImage(event, "iconPreview")'>
                 <img id='iconPreview' style='display:none; width: 50px; height: 50px; border-radius: 8px; border: 1px solid #ccc; object-fit: cover;'/>
             </div>
 
-            <label style='font-weight: bold; color: #d35400;'>2. Splash Screen Logo (Andar ka photo):</label><br>
+            <label style='font-weight: bold; color: #d35400;'>2. Splash Logo:</label><br>
             <div style='display: flex; align-items: center; gap: 15px; margin: 8px 0 15px 0;'>
                 <input type='file' name='splashLogo' accept='image/*' required style='width: 100%;' onchange='previewImage(event, "splashPreview")'>
                 <img id='splashPreview' style='display:none; width: 50px; height: 50px; border-radius: 8px; border: 1px solid #ccc; object-fit: cover;'/>
             </div>
             
-            <hr style='border: 1px solid #eee; margin: 20px 0;'>
-            <h3 style='margin-top: 0; color: #2980b9;'>⚙️ Advanced Settings</h3>
-            
-            <label style='font-weight: bold; color: #555; display: flex; align-items: center; justify-content: space-between;'>
-                Splash Screen Color:
-                <input type="color" id='splashColor' name="splashColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
-            </label>
-            
-            <label style='font-weight: bold; color: #555; display: flex; align-items: center; justify-content: space-between; margin-top: 10px;'>
-                App Background Color:
-                <input type="color" id='themeColor' name="themeColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
-            </label><br>
-
             <label style='font-weight: bold; color: #d35400; font-size: 14px;'>Package Name (Zaroori Hai):</label><br>
             <input type='text' id='packageName' name='packageName' placeholder='com.aapka.app' required style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
 
-            <label style='font-weight: bold; color: #555; font-size: 14px;'>AdMob App ID (Optional):</label><br>
-            <input type='text' id='admobAppId' name='admobAppId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
-
-            <label style='font-weight: bold; color: #555; font-size: 14px;'>AdMob Banner ID (Optional):</label><br>
-            <input type='text' id='admobBannerId' name='admobBannerId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
-
-            <label style='font-weight: bold; color: #555; font-size: 14px;'>OneSignal App ID (Notifications):</label><br>
+            <label style='font-weight: bold; color: #555; font-size: 14px;'>OneSignal App ID:</label><br>
             <input type='text' id='onesignalAppId' name='onesignalAppId' placeholder='UUID format...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
 
-            <button type='submit' style='margin-top: 10px; padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0px 4px 6px rgba(39,174,96,0.3);'>🚀 Build Master App</button>
+            <button type='submit' style='padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%;'>🚀 Build Master App</button>
         </form>
+
+        <!-- NAYA UPDATED: PRO NOTIFICATION PANEL -->
+        <div class="panel">
+            <h3 style='margin-top: 0; color: #c0392b;'>🔔 Pro Notification Manager</h3>
+            <p style='font-size: 12px; color: #555;'>App ID aur API Key ek baar daalein, system save kar lega!</p>
+            
+            <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 15px;">
+                <label style='font-weight: bold; color: #333; font-size: 13px;'>OneSignal App ID:</label><br>
+                <input type='text' id='notifAppId' placeholder='App ID yahan daalein...' style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+                
+                <label style='font-weight: bold; color: #333; font-size: 13px;'>REST API Key:</label><br>
+                <input type='password' id='notifApiKey' placeholder='os_v2_org_wspy...' style='padding:8px; margin:5px 0 5px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'>
+            </div>
+
+            <label style='font-weight: bold; color: #333; font-size: 14px;'>Title (Heading):</label><br>
+            <input type='text' id='notifTitle' placeholder='Ex: Naya Update Aaya Hai!' style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+
+            <label style='font-weight: bold; color: #333; font-size: 14px;'>Message (Details):</label><br>
+            <textarea id='notifMessage' placeholder='Type your message here...' rows="3" style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'></textarea><br>
+            
+            <!-- NAYA FEATURE: Photo Link -->
+            <label style='font-weight: bold; color: #333; font-size: 14px;'>Image URL (Photo link - Optional):</label><br>
+            <input type='url' id='notifImage' placeholder='https://website.com/photo.jpg' style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+
+            <button onclick='sendNotification()' style='padding:15px; background: #e67e22; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0px 4px 6px rgba(230,126,34,0.3);'>📢 Send Live Notification</button>
+        </div>
 
         <div id="toast"></div>
 
         <script>
             function showToast(msg, color) {
                 var t = document.getElementById("toast");
-                t.innerText = msg;
-                t.style.backgroundColor = color || "#27ae60"; // Default green
-                t.className = "show";
+                t.innerText = msg; t.style.backgroundColor = color || "#27ae60"; t.className = "show";
                 setTimeout(function(){ t.className = t.className.replace("show", ""); }, 3000);
             }
 
             function previewImage(event, previewId) {
                 var output = document.getElementById(previewId);
                 if(event.target.files && event.target.files[0]) {
-                    output.src = URL.createObjectURL(event.target.files[0]);
-                    output.style.display = 'block';
+                    output.src = URL.createObjectURL(event.target.files[0]); output.style.display = 'block';
                 } else { output.style.display = 'none'; }
             }
 
             function saveApp() {
                 var app = {
                     appName: document.getElementById('appName').value, appUrl: document.getElementById('appUrl').value,
-                    packageName: document.getElementById('packageName').value, splashColor: document.getElementById('splashColor').value,
-                    themeColor: document.getElementById('themeColor').value, admobAppId: document.getElementById('admobAppId').value,
-                    admobBannerId: document.getElementById('admobBannerId').value, onesignalAppId: document.getElementById('onesignalAppId').value
+                    packageName: document.getElementById('packageName').value, onesignalAppId: document.getElementById('onesignalAppId').value
                 };
                 var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
                 var existingIndex = apps.findIndex(a => a.packageName === app.packageName);
@@ -148,28 +132,24 @@ app.get('/', (req, res) => {
                 var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
                 apps = apps.filter(a => a.packageName !== packageName);
                 localStorage.setItem('myBuilderApps', JSON.stringify(apps));
-                loadApps();
-                showToast("🗑️ App history se delete ho gaya!", "#e74c3c");
+                loadApps(); showToast("🗑️ App history se delete ho gaya!", "#e74c3c");
             }
 
             function loadApps() {
                 var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
                 var container = document.getElementById('savedAppsList');
-                if(apps.length === 0) {
-                    container.innerHTML = '<p style="color:#7f8c8d; font-size:14px; font-style:italic;">Abhi tak koi app save nahi hai.</p>';
-                    return;
-                }
+                
+                // NAYA: Auto-load Notif Keys (Taki baar-baar paste na karna pade)
+                var savedNotifId = localStorage.getItem('myNotifAppId');
+                var savedNotifKey = localStorage.getItem('myNotifApiKey');
+                if(savedNotifId) document.getElementById('notifAppId').value = savedNotifId;
+                if(savedNotifKey) document.getElementById('notifApiKey').value = savedNotifKey;
+
+                if(apps.length === 0) { container.innerHTML = '<p style="color:#7f8c8d; font-size:14px; font-style:italic;">Abhi tak koi app save nahi hai.</p>'; return; }
                 container.innerHTML = '';
                 apps.forEach(function(app) {
-                    var card = document.createElement('div');
-                    card.className = 'app-card';
-                    card.innerHTML = \`
-                        <div onclick='fillData("\${app.packageName}")' style='padding-right: 30px;'>
-                            <b>📱 \${app.appName}</b><br>
-                            <small style="color:#bdc3c7;">\${app.packageName}</small>
-                        </div>
-                        <div class="del-btn" onclick='deleteApp("\${app.packageName}", event)'>🗑️</div>
-                    \`;
+                    var card = document.createElement('div'); card.className = 'app-card';
+                    card.innerHTML = \`<div onclick='fillData("\${app.packageName}")' style='padding-right: 30px;'><b>📱 \${app.appName}</b><br><small style="color:#bdc3c7;">\${app.packageName}</small></div><div class="del-btn" onclick='deleteApp("\${app.packageName}", event)'>🗑️</div>\`;
                     container.appendChild(card);
                 });
             }
@@ -181,12 +161,48 @@ app.get('/', (req, res) => {
                     document.getElementById('appName').value = app.appName;
                     document.getElementById('appUrl').value = app.appUrl;
                     document.getElementById('packageName').value = app.packageName;
-                    document.getElementById('splashColor').value = app.splashColor || '#FFFFFF';
-                    document.getElementById('themeColor').value = app.themeColor || '#FFFFFF';
-                    document.getElementById('admobAppId').value = app.admobAppId || '';
-                    document.getElementById('admobBannerId').value = app.admobBannerId || '';
                     document.getElementById('onesignalAppId').value = app.onesignalAppId || '';
                     showToast("✅ Details auto-fill ho gayi hain!", "#2980b9");
+                }
+            }
+
+            async function sendNotification() {
+                const appId = document.getElementById('notifAppId').value;
+                const apiKey = document.getElementById('notifApiKey').value;
+                const title = document.getElementById('notifTitle').value;
+                const message = document.getElementById('notifMessage').value;
+                const imageUrl = document.getElementById('notifImage').value; // Naya image option
+
+                if(!appId || !apiKey || !title || !message) {
+                    showToast("⚠️ Kripya Title, Message aur Keys bharein!", "#e74c3c");
+                    return;
+                }
+
+                // NAYA: Keys ko turant browser memory mein save kar lo
+                localStorage.setItem('myNotifAppId', appId);
+                localStorage.setItem('myNotifApiKey', apiKey);
+
+                showToast("⏳ Notification bheja ja raha hai...", "#f39c12");
+
+                try {
+                    const response = await fetch('/api/send-push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ appId, apiKey, title, message, imageUrl })
+                    });
+                    const data = await response.json();
+                    
+                    if(data.success) {
+                        showToast("✅ Notification chala gaya!", "#27ae60");
+                        // Auto-clear title, message, and image (Keys saved rahengi)
+                        document.getElementById('notifTitle').value = '';
+                        document.getElementById('notifMessage').value = '';
+                        document.getElementById('notifImage').value = '';
+                    } else {
+                        showToast("❌ Error: " + JSON.stringify(data.error), "#e74c3c");
+                    }
+                } catch (e) {
+                    showToast("❌ System Error!", "#e74c3c");
                 }
             }
 
@@ -196,16 +212,43 @@ app.get('/', (req, res) => {
     `);
 });
 
+// NAYA UPDATED: Backend route (Ab image bhi bhej sakta hai)
+app.post('/api/send-push', async (req, res) => {
+    const { appId, apiKey, title, message, imageUrl } = req.body;
+    try {
+        const payload = {
+            app_id: appId,
+            included_segments: ["Subscribed Users"],
+            headings: { en: title },
+            contents: { en: message }
+        };
+
+        // Agar user ne photo ka link dala hai, toh use add karo
+        if (imageUrl && imageUrl.trim() !== '') {
+            payload.big_picture = imageUrl; // Android phones ke liye
+        }
+
+        const response = await fetch('https://onesignal.com/api/v1/notifications', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Basic ' + apiKey
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        
+        if (data.errors) { res.json({ success: false, error: data.errors }); } 
+        else { res.json({ success: true, data: data }); }
+    } catch (error) { res.json({ success: false, error: error.message }); }
+});
+
 const cpUpload = upload.fields([{ name: 'appIcon', maxCount: 1 }, { name: 'splashLogo', maxCount: 1 }]);
 
 app.post('/build', cpUpload, async (req, res) => {
     const { appName, appUrl, splashColor, themeColor, packageName, onesignalAppId, admobAppId, admobBannerId } = req.body;
-    
-    const finalAdAppId = admobAppId || 'ca-app-pub-3940256099942544~3347511713';
-    const finalAdBannerId = admobBannerId || 'ca-app-pub-3940256099942544/6300978111';
     const finalPackageName = packageName;
     const finalOneSignalId = onesignalAppId || '00000000-0000-0000-0000-000000000000';
-
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
     const githubUser = 'chandchand1514-blip';
     const repoName = 'My-App-Builder';
@@ -224,90 +267,19 @@ app.post('/build', cpUpload, async (req, res) => {
             body: JSON.stringify({
                 event_type: 'build-app',
                 client_payload: { 
-                    appName: appName, appUrl: appUrl, appIconUrl: iconUrl, splashLogoUrl: splashUrl, buildId: buildId,
-                    config: { splashColor: splashColor || '#FFFFFF', themeColor: themeColor || '#FFFFFF', admobAppId: finalAdAppId, admobBannerId: finalAdBannerId, packageName: finalPackageName, onesignalAppId: finalOneSignalId }
+                    appName, appUrl, appIconUrl: iconUrl, splashLogoUrl: splashUrl, buildId,
+                    config: { splashColor: '#FFFFFF', themeColor: '#FFFFFF', admobAppId: '', admobBannerId: '', packageName: finalPackageName, onesignalAppId: finalOneSignalId }
                 }
             })
         });
 
         if (response.ok) {
-            res.send(`
-            <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #eef2f3;">
+            res.send(`<html><body style="font-family:Arial;text-align:center;padding:50px;background:#eef2f3;">
                 <h2 id="statusText" style="color: #e67e22;">⏳ Aapka Master App Ban Raha Hai...</h2>
-                <div id="loader" style="margin: 30px auto; border: 8px solid #ddd; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
-                <div id="errorBox" style="display:none; background: #ffdddd; color: #d32f2f; padding: 15px; border-radius: 8px; margin: 20px auto; width: 80%; max-width: 500px; font-weight: bold; border: 1px solid #d32f2f;"></div>
-                <p style="color: #7f8c8d; font-size: 14px;">(Aapke App ki details history mein save ho gayi hain)</p>
-                <a id="downloadBtn" href="` + downloadUrl + `" style="display: none; padding: 15px 40px; background: #27ae60; color: white; text-decoration: none; font-size: 20px; font-weight: bold; border-radius: 8px;">⬇️ Download APK</a>
-                <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
-                
-                <script>
-                    let attempts = 0;
-                    const checkInterval = setInterval(async () => {
-                        attempts++;
-                        if (attempts > 35) { 
-                            clearInterval(checkInterval);
-                            document.getElementById("statusText").innerText = "⚠️ Timeout Error!";
-                            document.getElementById("statusText").style.color = "#d32f2f";
-                            document.getElementById("loader").style.display = "none";
-                            document.getElementById("errorBox").style.display = "block";
-                            document.getElementById("errorBox").innerText = "Server bohot slow hai ya hang ho gaya hai. Kripya page refresh karke dobara try karein.";
-                            return;
-                        }
-                        try {
-                            const res = await fetch("/check-status/` + buildId + `");
-                            const data = await res.json();
-                            
-                            if (data.ready) {
-                                clearInterval(checkInterval);
-                                document.getElementById("statusText").innerText = "🎉 Aapka App Taiyar Hai!";
-                                document.getElementById("statusText").style.color = "#27ae60";
-                                document.getElementById("loader").style.display = "none";
-                                document.getElementById("downloadBtn").style.display = "inline-block";
-                            } else if (data.failed) {
-                                clearInterval(checkInterval);
-                                document.getElementById("statusText").innerText = "❌ Build Fail Ho Gayi!";
-                                document.getElementById("statusText").style.color = "#d32f2f";
-                                document.getElementById("loader").style.display = "none";
-                                document.getElementById("errorBox").style.display = "block";
-                                document.getElementById("errorBox").innerText = data.reason;
-                            }
-                        } catch (e) { }
-                    }, 10000);
-                </script>
-            </body></html>
-            `);
-        } else { res.send("<h3>❌ API Error. GitHub Limit Cross Ho Gayi.</h3>"); }
-    } catch (error) { res.send("<h3>❌ Error: " + error.message + "</h3>"); }
-});
-
-app.get('/check-status/:buildId', async (req, res) => {
-    const buildId = req.params.buildId;
-    const githubUser = 'chandchand1514-blip';
-    const repoName = 'My-App-Builder';
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-    const urlRelease = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-release.apk";
-    
-    try {
-        const response = await fetch(urlRelease, { method: 'HEAD' });
-        if (response.ok || response.status === 302) { return res.json({ ready: true, failed: false }); }
-
-        if (GITHUB_TOKEN) {
-            const runsUrl = "https://api.github.com/repos/" + githubUser + "/" + repoName + "/actions/runs?event=repository_dispatch&per_page=3";
-            const runsRes = await fetch(runsUrl, {
-                headers: { 'Accept': 'application/vnd.github.v3+json', 'Authorization': "token " + GITHUB_TOKEN, 'User-Agent': 'AppBuilder-Node' }
-            });
-            if (runsRes.ok) {
-                const runsData = await runsRes.json();
-                if (runsData.workflow_runs && runsData.workflow_runs.length > 0) {
-                    const latestRun = runsData.workflow_runs[0];
-                    if (latestRun.status === 'completed' && latestRun.conclusion === 'failure') {
-                        return res.json({ ready: false, failed: true, reason: "Karan: GitHub engine photo ko process nahi kar paaya ya settings galat hain." });
-                    }
-                }
-            }
+                <a id="downloadBtn" href="` + downloadUrl + `" style="padding:15px 40px;background:#27ae60;color:white;text-decoration:none;font-size:20px;font-weight:bold;border-radius:8px;">⬇️ Download APK</a>
+            </body></html>`);
         }
-        res.json({ ready: false, failed: false });
-    } catch (e) { res.json({ ready: false, failed: false }); }
+    } catch (error) { res.send("<h3>❌ Error: " + error.message + "</h3>"); }
 });
 
 app.listen(port, () => { console.log("Server running on port " + port); });
