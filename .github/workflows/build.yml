@@ -20,6 +20,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      # NAYA: Master Keystore banana aur save karna taaki UPDATE kaam kare
+      - name: Setup Permanent Keystore
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f "master.keystore" ]; then
+            echo "Keystore nahi mila, permanent signature bana raha hoon..."
+            keytool -genkey -v -keystore master.keystore -alias master_alias -keyalg RSA -keysize 2048 -validity 10000 -storepass master123 -keypass master123 -dname "CN=AppBuilder, O=Company, C=IN"
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add master.keystore
+            git commit -m "Added permanent keystore for seamless app updates"
+            git push
+          else
+            echo "Permanent Keystore mil gaya! App update ke liye ready hai."
+          fi
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
@@ -35,13 +52,8 @@ jobs:
         run: |
           RAW_PKG="${{ github.event.client_payload.config.packageName }}"
           PKG=$(echo "$RAW_PKG" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:].')
-          
-          if [[ "$PKG" != *"."* ]] && [ -n "$PKG" ]; then
-            PKG="com.${PKG}.app"
-          fi
-          
+          if [[ "$PKG" != *"."* ]] && [ -n "$PKG" ]; then PKG="com.${PKG}.app"; fi
           if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
-          
           PKG_DIR=$(echo "$PKG" | tr '.' '/')
 
           mkdir -p "app/src/main/java/$PKG_DIR"
@@ -50,6 +62,9 @@ jobs:
           mkdir -p app/src/main/res/mipmap-xxxhdpi
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/assets
+          
+          # Signature file ko app folder mein rakhna
+          cp master.keystore app/master.keystore
           
           curl -L "${{ github.event.client_payload.appIconUrl }}" -o temp_icon.img
           convert temp_icon.img -resize 512x512 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
@@ -80,6 +95,17 @@ jobs:
           android { 
               namespace "$PKG"
               compileSdk 34
+              
+              // NAYA: Permanent signature config attach karna
+              signingConfigs {
+                  release {
+                      storeFile file("master.keystore")
+                      storePassword "master123"
+                      keyAlias "master_alias"
+                      keyPassword "master123"
+                  }
+              }
+              
               defaultConfig { 
                   applicationId "$PKG"
                   minSdk 24
@@ -87,6 +113,16 @@ jobs:
                   versionCode 1
                   versionName "1.0"
               }
+              
+              buildTypes {
+                  debug {
+                      signingConfig signingConfigs.release
+                  }
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+              
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
                   targetCompatibility JavaVersion.VERSION_17
@@ -129,7 +165,6 @@ jobs:
           </body></html>
           EOF
           
-          # NAYA: Yahan se Text (App Name) hata diya gaya hai aur Logo bada kar diya gaya hai
           cat << EOF > app/src/main/res/layout/activity_splash.xml
           <?xml version="1.0" encoding="utf-8"?>
           <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -244,10 +279,10 @@ jobs:
           EOF
 
       - name: Build Android APK
-        run: gradle assembleDebug
+        run: gradle assembleRelease
 
       - name: Create Direct Download Link
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/debug/app-debug.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Successfully Built App."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Update-Ready App (Permanent Signature)."
