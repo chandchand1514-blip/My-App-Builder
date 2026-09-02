@@ -1,254 +1,297 @@
-const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const app = express();
-const port = process.env.PORT || 3000;
+name: Build APK Engine
 
-const dir = './public/logos';
-if (!fs.existsSync(dir)){ fs.mkdirSync(dir, { recursive: true }); }
+on:
+  repository_dispatch:
+    types: [build-app]
 
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) { cb(null, 'public/logos/') },
-    filename: function (req, file, cb) { cb(null, Date.now() + '-' + file.fieldname + path.extname(file.originalname)) }
-});
-const upload = multer({ storage: storage });
+permissions:
+  contents: write
 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(express.static('public'));
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-app.get('/', (req, res) => {
-    res.send(`
-    <html><body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3;'>
-        <h2 style='color: #2c3e50;'>🚀 Professional App Builder</h2>
-        
-        <div style='background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; width: 400px; max-width: 90%; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); display: inline-block; text-align: left;'>
-            <h3 style='margin-top: 0; color: #8e44ad;'>🔄 Aapke Purane Apps (Auto-Fill)</h3>
-            <p style='font-size: 13px; color: #555; margin-bottom: 10px;'>App update karne ke liye niche click karein.</p>
-            <div id='savedAppsList'></div>
-        </div>
-        <br>
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-        <form action='/build' method='POST' enctype='multipart/form-data' onsubmit='saveApp()' style='background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 400px; max-width: 90%;'>
-            
-            <h3 style='margin-top: 0; color: #2980b9;'>📱 Basic Info</h3>
-            <label style='font-weight: bold; color: #333;'>App ka Naam:</label><br>
-            <input type='text' id='appName' name='appName' placeholder='Ex: DesiStore' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
-            
-            <label style='font-weight: bold; color: #333;'>Website Link:</label><br>
-            <input type='url' id='appUrl' name='appUrl' placeholder='https://...' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
-            
-            <label style='font-weight: bold; color: #d35400;'>1. App Icon (Bahar ka photo):</label><br>
-            <input type='file' name='appIcon' accept='image/*' required style='margin:8px 0 15px 0; width: 100%;'><br>
+      - name: Setup Permanent Keystore
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f "master.keystore" ]; then
+            keytool -genkey -v -keystore master.keystore -alias master_alias -keyalg RSA -keysize 2048 -validity 10000 -storepass master123 -keypass master123 -dname "CN=AppBuilder, O=Company, C=IN"
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add master.keystore
+            git commit -m "Added permanent keystore for seamless app updates"
+            git push
+          fi
 
-            <label style='font-weight: bold; color: #d35400;'>2. Splash Screen Logo (Andar ka photo):</label><br>
-            <input type='file' name='splashLogo' accept='image/*' required style='margin:8px 0 15px 0; width: 100%;'><br>
-            
-            <hr style='border: 1px solid #eee; margin: 20px 0;'>
-            <h3 style='margin-top: 0; color: #2980b9;'>⚙️ Advanced Settings</h3>
-            
-            <label style='font-weight: bold; color: #555; display: flex; align-items: center; justify-content: space-between;'>
-                Splash Screen Color:
-                <input type="color" id='splashColor' name="splashColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
-            </label>
-            
-            <label style='font-weight: bold; color: #555; display: flex; align-items: center; justify-content: space-between; margin-top: 10px;'>
-                App Background Color:
-                <input type="color" id='themeColor' name="themeColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
-            </label><br>
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-            <label style='font-weight: bold; color: #d35400; font-size: 14px;'>Package Name (Zaroori Hai):</label><br>
-            <input type='text' id='packageName' name='packageName' placeholder='com.aapka.app' required style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+      # NAYA: Setup Gradle with Build Cache enabled (Isse baar-baar libraries download nahi hongi)
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.4'
+          cache-read-only: false
 
-            <label style='font-weight: bold; color: #555; font-size: 14px;'>AdMob App ID (Optional):</label><br>
-            <input type='text' id='admobAppId' name='admobAppId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+      - name: Generate Master App Code
+        run: |
+          RAW_PKG="${{ github.event.client_payload.config.packageName }}"
+          PKG=$(echo "$RAW_PKG" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:].')
+          if [[ "$PKG" != *"."* ]] && [ -n "$PKG" ]; then PKG="com.${PKG}.app"; fi
+          if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
+          PKG_DIR=$(echo "$PKG" | tr '.' '/')
 
-            <label style='font-weight: bold; color: #555; font-size: 14px;'>AdMob Banner ID (Optional):</label><br>
-            <input type='text' id='admobBannerId' name='admobBannerId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+          mkdir -p "app/src/main/java/$PKG_DIR"
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/layout
+          mkdir -p app/src/main/res/mipmap-xxxhdpi
+          mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/assets
+          
+          cp master.keystore app/master.keystore
+          
+          # ImageMagick pre-installed use kar rahe hain (Install step hata diya time bachane ke liye)
+          curl -L "${{ github.event.client_payload.appIconUrl }}" -o temp_icon.img
+          convert temp_icon.img -resize 512x512 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          
+          curl -L "${{ github.event.client_payload.splashLogoUrl }}" -o temp_splash.img
+          convert temp_splash.img -resize 512x512 app/src/main/res/drawable/splash_logo.png
+          
+          # NAYA: Parallel processing aur Caching ON kar di hai
+          cat << 'EOF' > gradle.properties
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          org.gradle.parallel=true
+          org.gradle.caching=true
+          org.gradle.configureondemand=true
+          EOF
+          
+          cat << 'EOF' > settings.gradle
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          rootProject.name = "My-App-Builder"
+          include ':app'
+          EOF
+          
+          cat << 'EOF' > build.gradle
+          plugins { id 'com.android.application' version '8.1.0' apply false }
+          EOF
+          
+          cat << EOF > app/build.gradle
+          plugins { id 'com.android.application' }
+          android { 
+              namespace "$PKG"
+              compileSdk 34
+              signingConfigs {
+                  release {
+                      storeFile file("master.keystore")
+                      storePassword "master123"
+                      keyAlias "master_alias"
+                      keyPassword "master123"
+                  }
+              }
+              defaultConfig { 
+                  applicationId "$PKG"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes {
+                  debug { signingConfig signingConfigs.release }
+                  release { signingConfig signingConfigs.release }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              implementation 'com.google.android.gms:play-services-ads:22.6.0'
+              implementation 'com.onesignal:OneSignal:4.8.7'
+          }
+          EOF
+          
+          cat << EOF > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${{ github.event.client_payload.config.admobAppId }}"/>
+                  <activity android:name=".SplashActivity" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+                  <activity android:name=".MainActivity" android:exported="true" />
+              </application>
+          </manifest>
+          EOF
+          
+          cat << EOF > app/src/main/res/values/strings.xml
+          <resources><string name="app_name">${{ github.event.client_payload.appName }}</string></resources>
+          EOF
+          
+          cat << 'EOF' > app/src/main/assets/no_internet.html
+          <html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;text-align:center;background:#f8f9fa;">
+          <div><h1 style="color:#d35400;">No Internet</h1><p>Kripya apna internet connection check karein aur app dobara kholen.</p></div>
+          </body></html>
+          EOF
+          
+          cat << EOF > app/src/main/res/layout/activity_splash.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent" android:layout_height="match_parent" 
+              android:background="${{ github.event.client_payload.config.splashColor }}">
+              <ImageView android:layout_width="250dp" android:layout_height="250dp" 
+                  android:layout_centerInParent="true" android:src="@drawable/splash_logo" />
+          </RelativeLayout>
+          EOF
+          
+          cat << EOF > app/src/main/res/layout/activity_main.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:ads="http://schemas.android.com/apk/res-auto"
+              android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="${{ github.event.client_payload.config.themeColor }}">
+              <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+              <com.google.android.gms.ads.AdView
+                  android:id="@+id/adView" android:layout_width="match_parent" android:layout_height="wrap_content"
+                  ads:adSize="BANNER" ads:adUnitId="${{ github.event.client_payload.config.admobBannerId }}" />
+          </LinearLayout>
+          EOF
+          
+          cat << EOF > "app/src/main/java/$PKG_DIR/SplashActivity.java"
+          package $PKG;
+          import android.app.Activity; import android.content.Intent; import android.os.Bundle; import android.os.Handler; import android.os.Looper; import android.graphics.Color; import android.view.View;
+          public class SplashActivity extends Activity {
+              @Override protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState); 
+                  try {
+                      String colorHex = "${{ github.event.client_payload.config.splashColor }}";
+                      int color = Color.parseColor(colorHex);
+                      getWindow().setStatusBarColor(color);
+                      double darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
+                      if (darkness < 0.5) { getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR); } 
+                      else { getWindow().getDecorView().setSystemUiVisibility(0); }
+                  } catch (Exception e) {}
+                  setContentView(R.layout.activity_splash);
+                  new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                      startActivity(new Intent(SplashActivity.this, MainActivity.class)); finish();
+                  }, 2500);
+              }
+          }
+          EOF
+          
+          cat << EOF > "app/src/main/java/$PKG_DIR/MainActivity.java"
+          package $PKG;
+          import android.Manifest; import android.app.Activity; import android.content.pm.PackageManager; import android.os.Build; import android.os.Bundle; import android.webkit.GeolocationPermissions; import android.webkit.PermissionRequest; import android.webkit.WebChromeClient; import android.webkit.WebSettings; import android.webkit.WebView; import android.webkit.WebViewClient; import java.util.ArrayList; import java.util.List; import android.graphics.Color; import android.view.View;
+          import com.google.android.gms.ads.MobileAds; import com.google.android.gms.ads.AdRequest; import com.google.android.gms.ads.AdView;
+          import com.onesignal.OneSignal;
+          import android.net.ConnectivityManager; import android.net.NetworkInfo; import android.content.Context;
+          
+          public class MainActivity extends Activity {
+              private PermissionRequest mPermissionRequest; private GeolocationPermissions.Callback mGeoCallback; private String mGeoOrigin;
+              @Override protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  try {
+                      String colorHex = "${{ github.event.client_payload.config.themeColor }}";
+                      int color = Color.parseColor(colorHex);
+                      getWindow().setStatusBarColor(color);
+                      double darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
+                      if (darkness < 0.5) { getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR); } 
+                      else { getWindow().getDecorView().setSystemUiVisibility(0); }
+                  } catch (Exception e) {}
+                  
+                  setContentView(R.layout.activity_main);
+                  
+                  OneSignal.initWithContext(this);
+                  OneSignal.setAppId("${{ github.event.client_payload.config.onesignalAppId }}");
+                  
+                  MobileAds.initialize(this, initializationStatus -> {});
+                  AdView mAdView = findViewById(R.id.adView);
+                  AdRequest adRequest = new AdRequest.Builder().build();
+                  mAdView.loadAd(adRequest);
 
-            <label style='font-weight: bold; color: #555; font-size: 14px;'>OneSignal App ID (Notifications):</label><br>
-            <input type='text' id='onesignalAppId' name='onesignalAppId' placeholder='UUID format...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+                  WebView webView = findViewById(R.id.webview);
+                  WebSettings webSettings = webView.getSettings();
+                  webSettings.setJavaScriptEnabled(true); webSettings.setDomStorageEnabled(true); webSettings.setMediaPlaybackRequiresUserGesture(false); webSettings.setGeolocationEnabled(true);
+                  
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                          view.loadUrl("file:///android_asset/no_internet.html");
+                      }
+                  });
 
-            <button type='submit' style='margin-top: 10px; padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0px 4px 6px rgba(39,174,96,0.3);'>🚀 Build Master App</button>
-        </form>
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override public void onPermissionRequest(final PermissionRequest request) {
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                              mPermissionRequest = request; List<String> reqPerms = new ArrayList<>();
+                              for (String res : request.getResources()) {
+                                  if (res.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) reqPerms.add(Manifest.permission.RECORD_AUDIO);
+                                  else if (res.equals(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) reqPerms.add(Manifest.permission.CAMERA);
+                              }
+                              if (!reqPerms.isEmpty()) {
+                                  boolean allGranted = true;
+                                  for (String p : reqPerms) { if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) { allGranted = false; break; } }
+                                  if (allGranted) request.grant(request.getResources());
+                                  else requestPermissions(reqPerms.toArray(new String[0]), 101);
+                              } else { request.grant(request.getResources()); }
+                          } else { request.grant(request.getResources()); }
+                      }
+                      @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                              if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) { mGeoCallback = callback; mGeoOrigin = origin; requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 102); } 
+                              else { callback.invoke(origin, true, false); }
+                          } else { callback.invoke(origin, true, false); }
+                      }
+                  });
+                  
+                  ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                  NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                  if (activeNetwork != null && activeNetwork.isConnectedOrConnecting()) {
+                      webView.loadUrl("${{ github.event.client_payload.appUrl }}");
+                  } else {
+                      webView.loadUrl("file:///android_asset/no_internet.html");
+                  }
+              }
+              @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+                  if (requestCode == 101 && mPermissionRequest != null) {
+                      boolean allGranted = true;
+                      for (int res : grantResults) { if (res != PackageManager.PERMISSION_GRANTED) { allGranted = false; break; } }
+                      if (allGranted) mPermissionRequest.grant(mPermissionRequest.getResources());
+                      mPermissionRequest = null;
+                  } else if (requestCode == 102 && mGeoCallback != null) {
+                      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) mGeoCallback.invoke(mGeoOrigin, true, false);
+                      else mGeoCallback.invoke(mGeoOrigin, false, false);
+                      mGeoCallback = null;
+                  }
+              }
+          }
+          EOF
 
-        <script>
-            function saveApp() {
-                var app = {
-                    appName: document.getElementById('appName').value,
-                    appUrl: document.getElementById('appUrl').value,
-                    packageName: document.getElementById('packageName').value,
-                    splashColor: document.getElementById('splashColor').value,
-                    themeColor: document.getElementById('themeColor').value,
-                    admobAppId: document.getElementById('admobAppId').value,
-                    admobBannerId: document.getElementById('admobBannerId').value,
-                    onesignalAppId: document.getElementById('onesignalAppId').value
-                };
-                var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
-                var existingIndex = apps.findIndex(a => a.packageName === app.packageName);
-                if(existingIndex >= 0) { apps[existingIndex] = app; } else { apps.push(app); }
-                localStorage.setItem('myBuilderApps', JSON.stringify(apps));
-            }
+      # NAYA: Parallel command jisse Build bohot fast hogi
+      - name: Build Android APK
+        run: gradle assembleRelease --parallel --build-cache
 
-            function loadApps() {
-                var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
-                var container = document.getElementById('savedAppsList');
-                if(apps.length === 0) {
-                    container.innerHTML = '<p style="color:#e74c3c; font-size:14px; font-weight:bold;">Abhi tak koi app save nahi hai.</p>';
-                    return;
-                }
-                container.innerHTML = '';
-                apps.forEach(function(app) {
-                    var btn = document.createElement('div');
-                    btn.innerHTML = '<b>📱 ' + app.appName + '</b><br><small style="color:#ddd;">' + app.packageName + '</small>';
-                    btn.style = 'background: #34495e; color: white; padding: 10px; margin: 5px; border-radius: 6px; cursor: pointer; display: inline-block; text-align: center;';
-                    btn.onclick = function() {
-                        document.getElementById('appName').value = app.appName;
-                        document.getElementById('appUrl').value = app.appUrl;
-                        document.getElementById('packageName').value = app.packageName;
-                        document.getElementById('splashColor').value = app.splashColor || '#FFFFFF';
-                        document.getElementById('themeColor').value = app.themeColor || '#FFFFFF';
-                        document.getElementById('admobAppId').value = app.admobAppId || '';
-                        document.getElementById('admobBannerId').value = app.admobBannerId || '';
-                        document.getElementById('onesignalAppId').value = app.onesignalAppId || '';
-                        alert('Details auto-fill ho gayi hain!');
-                    };
-                    container.appendChild(btn);
-                });
-            }
-            window.onload = loadApps;
-        </script>
-    </body></html>
-    `);
-});
-
-const cpUpload = upload.fields([{ name: 'appIcon', maxCount: 1 }, { name: 'splashLogo', maxCount: 1 }]);
-
-app.post('/build', cpUpload, async (req, res) => {
-    const { appName, appUrl, splashColor, themeColor, packageName, onesignalAppId, admobAppId, admobBannerId } = req.body;
-    
-    const finalAdAppId = admobAppId || 'ca-app-pub-3940256099942544~3347511713';
-    const finalAdBannerId = admobBannerId || 'ca-app-pub-3940256099942544/6300978111';
-    const finalPackageName = packageName;
-    const finalOneSignalId = onesignalAppId || '00000000-0000-0000-0000-000000000000';
-
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-    const githubUser = 'chandchand1514-blip';
-    const repoName = 'My-App-Builder';
-    const buildId = Date.now().toString(); 
-    
-    let iconUrl = ''; let splashUrl = '';
-    if (req.files['appIcon']) { iconUrl = 'https://' + req.get('host') + '/logos/' + req.files['appIcon'][0].filename; }
-    if (req.files['splashLogo']) { splashUrl = 'https://' + req.get('host') + '/logos/' + req.files['splashLogo'][0].filename; }
-
-    const downloadUrl = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-release.apk";
-
-    try {
-        const response = await fetch("https://api.github.com/repos/" + githubUser + "/" + repoName + "/dispatches", {
-            method: 'POST',
-            headers: { 'Accept': 'application/vnd.github.v3+json', 'Authorization': "token " + GITHUB_TOKEN },
-            body: JSON.stringify({
-                event_type: 'build-app',
-                client_payload: { 
-                    appName: appName, appUrl: appUrl, appIconUrl: iconUrl, splashLogoUrl: splashUrl, buildId: buildId,
-                    config: { splashColor: splashColor || '#FFFFFF', themeColor: themeColor || '#FFFFFF', admobAppId: finalAdAppId, admobBannerId: finalAdBannerId, packageName: finalPackageName, onesignalAppId: finalOneSignalId }
-                }
-            })
-        });
-
-        if (response.ok) {
-            res.send(`
-            <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #eef2f3;">
-                <h2 id="statusText" style="color: #e67e22;">⏳ Aapka Master App Ban Raha Hai...</h2>
-                <div id="loader" style="margin: 30px auto; border: 8px solid #ddd; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
-                <div id="errorBox" style="display:none; background: #ffdddd; color: #d32f2f; padding: 15px; border-radius: 8px; margin: 20px auto; width: 80%; max-width: 500px; font-weight: bold; border: 1px solid #d32f2f;"></div>
-                <a id="downloadBtn" href="` + downloadUrl + `" style="display: none; padding: 15px 40px; background: #27ae60; color: white; text-decoration: none; font-size: 20px; font-weight: bold; border-radius: 8px;">⬇️ Download APK</a>
-                <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
-                
-                <script>
-                    let attempts = 0;
-                    const checkInterval = setInterval(async () => {
-                        attempts++;
-                        if (attempts > 35) { // ~6 min timeout
-                            clearInterval(checkInterval);
-                            document.getElementById("statusText").innerText = "⚠️ Timeout Error!";
-                            document.getElementById("statusText").style.color = "#d32f2f";
-                            document.getElementById("loader").style.display = "none";
-                            document.getElementById("errorBox").style.display = "block";
-                            document.getElementById("errorBox").innerText = "Server bohot slow hai ya hang ho gaya hai. Kripya page refresh karke dobara try karein.";
-                            return;
-                        }
-                        
-                        try {
-                            const res = await fetch("/check-status/` + buildId + `");
-                            const data = await res.json();
-                            
-                            if (data.ready) {
-                                clearInterval(checkInterval);
-                                document.getElementById("statusText").innerText = "🎉 Aapka App Taiyar Hai!";
-                                document.getElementById("statusText").style.color = "#27ae60";
-                                document.getElementById("loader").style.display = "none";
-                                document.getElementById("downloadBtn").style.display = "inline-block";
-                            } else if (data.failed) {
-                                clearInterval(checkInterval);
-                                document.getElementById("statusText").innerText = "❌ Build Fail Ho Gayi!";
-                                document.getElementById("statusText").style.color = "#d32f2f";
-                                document.getElementById("loader").style.display = "none";
-                                document.getElementById("errorBox").style.display = "block";
-                                document.getElementById("errorBox").innerText = data.reason;
-                            }
-                        } catch (e) { }
-                    }, 10000);
-                </script>
-            </body></html>
-            `);
-        } else { res.send("<h3>❌ API Error. GitHub Limit Cross Ho Gayi.</h3>"); }
-    } catch (error) { res.send("<h3>❌ Error: " + error.message + "</h3>"); }
-});
-
-app.get('/check-status/:buildId', async (req, res) => {
-    const buildId = req.params.buildId;
-    const githubUser = 'chandchand1514-blip';
-    const repoName = 'My-App-Builder';
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-
-    const urlRelease = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-release.apk";
-    
-    try {
-        // 1. Pehle check karo ki APK ban gaya ya nahi (Success Check)
-        const response = await fetch(urlRelease, { method: 'HEAD' });
-        if (response.ok || response.status === 302) { 
-            return res.json({ ready: true, failed: false }); 
-        }
-
-        // 2. Agar nahi bana, toh GitHub API se pucho ki kya Build Fail hui hai? (Error Check)
-        if (GITHUB_TOKEN) {
-            const runsUrl = "https://api.github.com/repos/" + githubUser + "/" + repoName + "/actions/runs?event=repository_dispatch&per_page=3";
-            const runsRes = await fetch(runsUrl, {
-                headers: { 'Accept': 'application/vnd.github.v3+json', 'Authorization': "token " + GITHUB_TOKEN, 'User-Agent': 'AppBuilder-Node' }
-            });
-            
-            if (runsRes.ok) {
-                const runsData = await runsRes.json();
-                if (runsData.workflow_runs && runsData.workflow_runs.length > 0) {
-                    const latestRun = runsData.workflow_runs[0]; // Sabse latest build
-                    if (latestRun.status === 'completed' && latestRun.conclusion === 'failure') {
-                        return res.json({ 
-                            ready: false, 
-                            failed: true, 
-                            reason: "Karan (Reason): GitHub engine photo ko process nahi kar paaya ya settings galat hain. Kripya doosri photo ke sath dobara try karein." 
-                        });
-                    }
-                }
-            }
-        }
-        
-        // 3. Agar fail nahi hui aur bani bhi nahi hai, toh abhi process chal raha hai
-        res.json({ ready: false, failed: false });
-    } catch (e) { 
-        res.json({ ready: false, failed: false }); 
-    }
-});
-
-app.listen(port, () => { console.log("Server running on port " + port); });
+      - name: Create Direct Download Link
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Super Fast Build APK."
