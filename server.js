@@ -21,15 +21,24 @@ app.use(express.static('public'));
 app.get('/', (req, res) => {
     res.send(`
     <html><body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3;'>
-        <h2 style='color: #2c3e50;'>🚀 Professional App Builder (Developer Console)</h2>
-        <form action='/build' method='POST' enctype='multipart/form-data' style='background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 400px; max-width: 90%;'>
+        <h2 style='color: #2c3e50;'>🚀 Professional App Builder</h2>
+        
+        <!-- NAYA: Saved Apps History Box -->
+        <div style='background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; width: 400px; max-width: 90%; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); display: inline-block; text-align: left;'>
+            <h3 style='margin-top: 0; color: #8e44ad;'>🔄 Aapke Purane Apps (Auto-Fill)</h3>
+            <p style='font-size: 13px; color: #555; margin-bottom: 10px;'>App update karne ke liye niche click karein. Saari details khud bhar jayengi!</p>
+            <div id='savedAppsList'></div>
+        </div>
+        <br>
+
+        <form action='/build' method='POST' enctype='multipart/form-data' onsubmit='saveApp()' style='background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 400px; max-width: 90%;'>
             
             <h3 style='margin-top: 0; color: #2980b9;'>📱 Basic Info</h3>
             <label style='font-weight: bold; color: #333;'>App ka Naam:</label><br>
-            <input type='text' name='appName' placeholder='Ex: DesiStore' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='text' id='appName' name='appName' placeholder='Ex: DesiStore' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
             
             <label style='font-weight: bold; color: #333;'>Website Link:</label><br>
-            <input type='url' name='appUrl' placeholder='https://...' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='url' id='appUrl' name='appUrl' placeholder='https://...' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
             
             <label style='font-weight: bold; color: #d35400;'>1. App Icon (Bahar ka photo):</label><br>
             <input type='file' name='appIcon' accept='image/*' required style='margin:8px 0 15px 0; width: 100%;'><br>
@@ -42,28 +51,84 @@ app.get('/', (req, res) => {
             
             <label style='font-weight: bold; color: #555; display: flex; align-items: center; justify-content: space-between;'>
                 Splash Screen Color:
-                <input type="color" name="splashColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
+                <input type="color" id='splashColor' name="splashColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
             </label>
             
             <label style='font-weight: bold; color: #555; display: flex; align-items: center; justify-content: space-between; margin-top: 10px;'>
                 App Background Color:
-                <input type="color" name="themeColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
+                <input type="color" id='themeColor' name="themeColor" value="#FFFFFF" style="width: 50px; height: 35px; border: none; cursor: pointer;">
             </label><br>
 
             <label style='font-weight: bold; color: #d35400; font-size: 14px;'>Package Name (Zaroori Hai):</label><br>
-            <input type='text' name='packageName' placeholder='com.aapka.app' required style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='text' id='packageName' name='packageName' placeholder='com.aapka.app' required style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
 
             <label style='font-weight: bold; color: #555; font-size: 14px;'>AdMob App ID (Optional):</label><br>
-            <input type='text' name='admobAppId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='text' id='admobAppId' name='admobAppId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
 
             <label style='font-weight: bold; color: #555; font-size: 14px;'>AdMob Banner ID (Optional):</label><br>
-            <input type='text' name='admobBannerId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='text' id='admobBannerId' name='admobBannerId' placeholder='ca-app-pub-...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
 
             <label style='font-weight: bold; color: #555; font-size: 14px;'>OneSignal App ID (Notifications):</label><br>
-            <input type='text' name='onesignalAppId' placeholder='UUID format...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='text' id='onesignalAppId' name='onesignalAppId' placeholder='UUID format...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
 
             <button type='submit' style='margin-top: 10px; padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0px 4px 6px rgba(39,174,96,0.3);'>🚀 Build Master App</button>
         </form>
+
+        <script>
+            // NAYA JAVASCRIPT: App details save aur load karne ke liye
+            function saveApp() {
+                var app = {
+                    appName: document.getElementById('appName').value,
+                    appUrl: document.getElementById('appUrl').value,
+                    packageName: document.getElementById('packageName').value,
+                    splashColor: document.getElementById('splashColor').value,
+                    themeColor: document.getElementById('themeColor').value,
+                    admobAppId: document.getElementById('admobAppId').value,
+                    admobBannerId: document.getElementById('admobBannerId').value,
+                    onesignalAppId: document.getElementById('onesignalAppId').value
+                };
+                var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
+                
+                // Check karega ki kya ye package name pehle se hai
+                var existingIndex = apps.findIndex(a => a.packageName === app.packageName);
+                if(existingIndex >= 0) {
+                    apps[existingIndex] = app; // Update old entry
+                } else {
+                    apps.push(app); // Save new entry
+                }
+                localStorage.setItem('myBuilderApps', JSON.stringify(apps));
+            }
+
+            function loadApps() {
+                var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
+                var container = document.getElementById('savedAppsList');
+                if(apps.length === 0) {
+                    container.innerHTML = '<p style="color:#e74c3c; font-size:14px; font-weight:bold;">Abhi tak koi app save nahi hai. Apna pehla app banayein!</p>';
+                    return;
+                }
+                container.innerHTML = '';
+                apps.forEach(function(app) {
+                    var btn = document.createElement('div');
+                    btn.innerHTML = '<b>📱 ' + app.appName + '</b><br><small style="color:#ddd;">' + app.packageName + '</small>';
+                    btn.style = 'background: #34495e; color: white; padding: 10px; margin: 5px; border-radius: 6px; cursor: pointer; display: inline-block; text-align: center; border: 2px solid transparent; transition: 0.2s;';
+                    
+                    // Button click karne par Auto-Fill
+                    btn.onclick = function() {
+                        document.getElementById('appName').value = app.appName;
+                        document.getElementById('appUrl').value = app.appUrl;
+                        document.getElementById('packageName').value = app.packageName;
+                        document.getElementById('splashColor').value = app.splashColor || '#FFFFFF';
+                        document.getElementById('themeColor').value = app.themeColor || '#FFFFFF';
+                        document.getElementById('admobAppId').value = app.admobAppId || '';
+                        document.getElementById('admobBannerId').value = app.admobBannerId || '';
+                        document.getElementById('onesignalAppId').value = app.onesignalAppId || '';
+                        alert(app.appName + ' ki details form mein bhar di gayi hain! Bas photos select karein aur Build dabayein.');
+                    };
+                    container.appendChild(btn);
+                });
+            }
+            window.onload = loadApps;
+        </script>
     </body></html>
     `);
 });
@@ -75,7 +140,7 @@ app.post('/build', cpUpload, async (req, res) => {
     
     const finalAdAppId = admobAppId || 'ca-app-pub-3940256099942544~3347511713';
     const finalAdBannerId = admobBannerId || 'ca-app-pub-3940256099942544/6300978111';
-    const finalPackageName = packageName; // Ab yeh required ho gaya hai
+    const finalPackageName = packageName;
     const finalOneSignalId = onesignalAppId || '00000000-0000-0000-0000-000000000000';
 
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -88,7 +153,7 @@ app.post('/build', cpUpload, async (req, res) => {
     if (req.files['appIcon']) { iconUrl = 'https://' + req.get('host') + '/logos/' + req.files['appIcon'][0].filename; }
     if (req.files['splashLogo']) { splashUrl = 'https://' + req.get('host') + '/logos/' + req.files['splashLogo'][0].filename; }
 
-    const downloadUrl = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-debug.apk";
+    const downloadUrl = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-debug.apk"; // Ya app-release.apk
 
     try {
         const response = await fetch("https://api.github.com/repos/" + githubUser + "/" + repoName + "/dispatches", {
@@ -119,6 +184,10 @@ app.post('/build', cpUpload, async (req, res) => {
             <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #eef2f3;">
                 <h2 id="statusText" style="color: #e67e22;">⏳ Aapka Master App Ban Raha Hai...</h2>
                 <div id="loader" style="margin: 30px auto; border: 8px solid #ddd; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
+                
+                <!-- NAYA: Auto-save success message -->
+                <p style="color: #7f8c8d; font-size: 14px;">(Aapke App ki details history mein save ho gayi hain)</p>
+                
                 <a id="downloadBtn" href="` + downloadUrl + `" style="display: none; padding: 15px 40px; background: #27ae60; color: white; text-decoration: none; font-size: 20px; font-weight: bold; border-radius: 8px;">⬇️ Download APK</a>
                 <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
                 <script>
@@ -144,11 +213,18 @@ app.post('/build', cpUpload, async (req, res) => {
 
 app.get('/check-status/:buildId', async (req, res) => {
     const buildId = req.params.buildId;
-    const url = "https://github.com/chandchand1514-blip/My-App-Builder/releases/download/build-" + buildId + "/app-debug.apk";
+    // Release APK URL check karega (Kyunki humne pichle script mein assembleRelease kar diya tha)
+    const url = "https://github.com/chandchand1514-blip/My-App-Builder/releases/download/build-" + buildId + "/app-release.apk";
     try {
         const response = await fetch(url, { method: 'HEAD' });
         if (response.ok || response.status === 302) { res.json({ ready: true }); } 
-        else { res.json({ ready: false }); }
+        else { 
+            // Fallback for debug apk just in case
+            const urlDebug = "https://github.com/chandchand1514-blip/My-App-Builder/releases/download/build-" + buildId + "/app-debug.apk";
+            const responseDebug = await fetch(urlDebug, { method: 'HEAD' });
+            if (responseDebug.ok || responseDebug.status === 302) { res.json({ ready: true }); }
+            else { res.json({ ready: false }); }
+        }
     } catch (e) { res.json({ ready: false }); }
 });
 
