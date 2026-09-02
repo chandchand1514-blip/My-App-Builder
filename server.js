@@ -27,24 +27,32 @@ app.get('/', (req, res) => {
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        
         .app-card { background: #2c3e50; color: white; padding: 12px 15px; margin: 6px; border-radius: 8px; cursor: pointer; display: inline-block; text-align: left; position: relative; min-width: 160px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
         .app-card:hover { transform: scale(1.02); }
         .del-btn { position: absolute; top: 10px; right: 10px; background: #e74c3c; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: 0.3s; }
         .del-btn:hover { background: #c0392b; }
-        .panel { background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 400px; max-width: 90%; margin-bottom: 20px; vertical-align: top; margin-right: 15px; }
+        
+        .modal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
+        .modal-content { background-color: white; margin: 10vh auto; padding: 25px; border-radius: 12px; width: 400px; max-width: 90%; text-align: left; position: relative; animation: slideDown 0.3s ease-out; box-shadow: 0px 10px 30px rgba(0,0,0,0.3); }
+        .close-btn { position: absolute; right: 20px; top: 15px; font-size: 28px; font-weight: bold; cursor: pointer; color: #7f8c8d; transition: 0.2s; }
+        .close-btn:hover { color: #e74c3c; }
+        @keyframes slideDown { from {transform: translateY(-50px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
     </style>
     </head>
     <body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3; margin:0;'>
-        <h2 style='color: #2c3e50;'>🚀 Professional App Builder & Manager</h2>
+        <h2 style='color: #2c3e50;'>🚀 Professional App Builder</h2>
         
+        <button type="button" onclick="document.getElementById('notifModal').style.display='block'" style="background: #e67e22; color: white; border: none; padding: 12px 25px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(230,126,34,0.3); transition: 0.2s;">🔔 Open Notification Panel</button>
+        <br>
+
         <div style='background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; width: 400px; max-width: 90%; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); display: inline-block; text-align: left;'>
             <h3 style='margin-top: 0; color: #8e44ad;'>🔄 Aapke Purane Apps</h3>
             <div id='savedAppsList'></div>
         </div>
         <br>
 
-        <!-- APP BUILDER FORM -->
-        <form action='/build' method='POST' enctype='multipart/form-data' onsubmit='saveApp()' class="panel">
+        <form action='/build' method='POST' enctype='multipart/form-data' onsubmit='saveApp()' style='background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 400px; max-width: 90%; margin: 0 auto;'>
             <h3 style='margin-top: 0; color: #2980b9;'>📱 Build New App</h3>
             
             <label style='font-weight: bold; color: #333;'>App ka Naam:</label><br>
@@ -74,35 +82,36 @@ app.get('/', (req, res) => {
             <button type='submit' style='padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%;'>🚀 Build Master App</button>
         </form>
 
-        <!-- NAYA UPDATED: PRO NOTIFICATION PANEL -->
-        <div class="panel">
-            <h3 style='margin-top: 0; color: #c0392b;'>🔔 Pro Notification Manager</h3>
-            <p style='font-size: 12px; color: #555;'>App ID aur API Key ek baar daalein, system save kar lega!</p>
-            
-            <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 15px;">
-                <label style='font-weight: bold; color: #333; font-size: 13px;'>OneSignal App ID:</label><br>
-                <input type='text' id='notifAppId' placeholder='App ID yahan daalein...' style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+        <div id="notifModal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn" onclick="document.getElementById('notifModal').style.display='none'">&times;</span>
+                <h3 style='margin-top: 0; color: #c0392b;'>🔔 Send Live Notification</h3>
+                <p style='font-size: 12px; color: #555;'>Sirf App ID aur Message daalein. System khud bhej dega.</p>
                 
-                <label style='font-weight: bold; color: #333; font-size: 13px;'>REST API Key:</label><br>
-                <input type='password' id='notifApiKey' placeholder='os_v2_org_wspy...' style='padding:8px; margin:5px 0 5px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'>
+                <label style='font-weight: bold; color: #333; font-size: 14px;'>OneSignal App ID (Kisko bhejna hai):</label><br>
+                <input type='text' id='notifAppId' placeholder='App ID yahan daalein...' style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+
+                <label style='font-weight: bold; color: #333; font-size: 14px;'>Title (Heading):</label><br>
+                <input type='text' id='notifTitle' placeholder='Ex: Naya Update Aaya Hai!' style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+
+                <label style='font-weight: bold; color: #333; font-size: 14px;'>Message (Details):</label><br>
+                <textarea id='notifMessage' placeholder='Type your message here...' rows="3" style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'></textarea><br>
+                
+                <label style='font-weight: bold; color: #333; font-size: 14px;'>Image URL (Photo link - Optional):</label><br>
+                <input type='url' id='notifImage' placeholder='https://website.com/photo.jpg' style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+
+                <button onclick='sendNotification()' style='padding:15px; background: #e67e22; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0px 4px 6px rgba(230,126,34,0.3);'>📢 Send Notification</button>
             </div>
-
-            <label style='font-weight: bold; color: #333; font-size: 14px;'>Title (Heading):</label><br>
-            <input type='text' id='notifTitle' placeholder='Ex: Naya Update Aaya Hai!' style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
-
-            <label style='font-weight: bold; color: #333; font-size: 14px;'>Message (Details):</label><br>
-            <textarea id='notifMessage' placeholder='Type your message here...' rows="3" style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'></textarea><br>
-            
-            <!-- NAYA FEATURE: Photo Link -->
-            <label style='font-weight: bold; color: #333; font-size: 14px;'>Image URL (Photo link - Optional):</label><br>
-            <input type='url' id='notifImage' placeholder='https://website.com/photo.jpg' style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
-
-            <button onclick='sendNotification()' style='padding:15px; background: #e67e22; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0px 4px 6px rgba(230,126,34,0.3);'>📢 Send Live Notification</button>
         </div>
 
         <div id="toast"></div>
 
         <script>
+            window.onclick = function(event) {
+                var modal = document.getElementById('notifModal');
+                if (event.target == modal) { modal.style.display = "none"; }
+            }
+
             function showToast(msg, color) {
                 var t = document.getElementById("toast");
                 t.innerText = msg; t.style.backgroundColor = color || "#27ae60"; t.className = "show";
@@ -138,12 +147,6 @@ app.get('/', (req, res) => {
             function loadApps() {
                 var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
                 var container = document.getElementById('savedAppsList');
-                
-                // NAYA: Auto-load Notif Keys (Taki baar-baar paste na karna pade)
-                var savedNotifId = localStorage.getItem('myNotifAppId');
-                var savedNotifKey = localStorage.getItem('myNotifApiKey');
-                if(savedNotifId) document.getElementById('notifAppId').value = savedNotifId;
-                if(savedNotifKey) document.getElementById('notifApiKey').value = savedNotifKey;
 
                 if(apps.length === 0) { container.innerHTML = '<p style="color:#7f8c8d; font-size:14px; font-style:italic;">Abhi tak koi app save nahi hai.</p>'; return; }
                 container.innerHTML = '';
@@ -162,25 +165,21 @@ app.get('/', (req, res) => {
                     document.getElementById('appUrl').value = app.appUrl;
                     document.getElementById('packageName').value = app.packageName;
                     document.getElementById('onesignalAppId').value = app.onesignalAppId || '';
+                    document.getElementById('notifAppId').value = app.onesignalAppId || ''; 
                     showToast("✅ Details auto-fill ho gayi hain!", "#2980b9");
                 }
             }
 
             async function sendNotification() {
                 const appId = document.getElementById('notifAppId').value;
-                const apiKey = document.getElementById('notifApiKey').value;
                 const title = document.getElementById('notifTitle').value;
                 const message = document.getElementById('notifMessage').value;
-                const imageUrl = document.getElementById('notifImage').value; // Naya image option
+                const imageUrl = document.getElementById('notifImage').value; 
 
-                if(!appId || !apiKey || !title || !message) {
-                    showToast("⚠️ Kripya Title, Message aur Keys bharein!", "#e74c3c");
+                if(!appId || !title || !message) {
+                    showToast("⚠️ Kripya Title aur Message bharein!", "#e74c3c");
                     return;
                 }
-
-                // NAYA: Keys ko turant browser memory mein save kar lo
-                localStorage.setItem('myNotifAppId', appId);
-                localStorage.setItem('myNotifApiKey', apiKey);
 
                 showToast("⏳ Notification bheja ja raha hai...", "#f39c12");
 
@@ -188,21 +187,21 @@ app.get('/', (req, res) => {
                     const response = await fetch('/api/send-push', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ appId, apiKey, title, message, imageUrl })
+                        body: JSON.stringify({ appId, title, message, imageUrl })
                     });
                     const data = await response.json();
                     
                     if(data.success) {
                         showToast("✅ Notification chala gaya!", "#27ae60");
-                        // Auto-clear title, message, and image (Keys saved rahengi)
                         document.getElementById('notifTitle').value = '';
                         document.getElementById('notifMessage').value = '';
                         document.getElementById('notifImage').value = '';
+                        setTimeout(() => { document.getElementById('notifModal').style.display = 'none'; }, 1000);
                     } else {
                         showToast("❌ Error: " + JSON.stringify(data.error), "#e74c3c");
                     }
                 } catch (e) {
-                    showToast("❌ System Error!", "#e74c3c");
+                    showToast("❌ API Key Render mein missing hai!", "#e74c3c");
                 }
             }
 
@@ -212,9 +211,16 @@ app.get('/', (req, res) => {
     `);
 });
 
-// NAYA UPDATED: Backend route (Ab image bhi bhej sakta hai)
 app.post('/api/send-push', async (req, res) => {
-    const { appId, apiKey, title, message, imageUrl } = req.body;
+    const { appId, title, message, imageUrl } = req.body;
+    
+    // NAYA: API Key ab GitHub se nahi, balki Render Environment se aayegi
+    const SECRET_API_KEY = process.env.ONESIGNAL_API_KEY;
+
+    if (!SECRET_API_KEY) {
+        return res.json({ success: false, error: "Render par API Key save nahi hai!" });
+    }
+
     try {
         const payload = {
             app_id: appId,
@@ -223,16 +229,15 @@ app.post('/api/send-push', async (req, res) => {
             contents: { en: message }
         };
 
-        // Agar user ne photo ka link dala hai, toh use add karo
         if (imageUrl && imageUrl.trim() !== '') {
-            payload.big_picture = imageUrl; // Android phones ke liye
+            payload.big_picture = imageUrl; 
         }
 
         const response = await fetch('https://onesignal.com/api/v1/notifications', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Basic ' + apiKey
+                'Authorization': 'Basic ' + SECRET_API_KEY
             },
             body: JSON.stringify(payload)
         });
@@ -268,7 +273,7 @@ app.post('/build', cpUpload, async (req, res) => {
                 event_type: 'build-app',
                 client_payload: { 
                     appName, appUrl, appIconUrl: iconUrl, splashLogoUrl: splashUrl, buildId,
-                    config: { splashColor: '#FFFFFF', themeColor: '#FFFFFF', admobAppId: '', admobBannerId: '', packageName: finalPackageName, onesignalAppId: finalOneSignalId }
+                    config: { splashColor: splashColor || '#FFFFFF', themeColor: themeColor || '#FFFFFF', admobAppId: admobAppId || '', admobBannerId: admobBannerId || '', packageName: finalPackageName, onesignalAppId: finalOneSignalId }
                 }
             })
         });
