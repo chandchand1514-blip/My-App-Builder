@@ -20,12 +20,44 @@ app.use(express.static('public'));
 
 app.get('/', (req, res) => {
     res.send(`
-    <html><body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3;'>
+    <html><head>
+    <style>
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        /* Professional Custom Notification (Toast) */
+        #toast {
+            visibility: hidden; min-width: 280px; background-color: #333; color: #fff;
+            text-align: center; border-radius: 8px; padding: 16px; position: fixed;
+            z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%);
+            box-shadow: 0px 5px 15px rgba(0,0,0,0.3); font-size: 16px; font-weight: bold;
+        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        
+        /* App Card Styling */
+        .app-card {
+            background: #2c3e50; color: white; padding: 12px 15px; margin: 6px; 
+            border-radius: 8px; cursor: pointer; display: inline-block; 
+            text-align: left; position: relative; min-width: 160px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;
+        }
+        .app-card:hover { transform: scale(1.02); }
+        .del-btn {
+            position: absolute; top: 10px; right: 10px; background: #e74c3c; 
+            color: white; border-radius: 50%; width: 24px; height: 24px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 12px; transition: 0.3s;
+        }
+        .del-btn:hover { background: #c0392b; }
+    </style>
+    </head>
+    <body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3; margin:0;'>
         <h2 style='color: #2c3e50;'>🚀 Professional App Builder</h2>
         
         <div style='background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; width: 400px; max-width: 90%; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); display: inline-block; text-align: left;'>
-            <h3 style='margin-top: 0; color: #8e44ad;'>🔄 Aapke Purane Apps (Auto-Fill)</h3>
-            <p style='font-size: 13px; color: #555; margin-bottom: 10px;'>App update karne ke liye niche click karein.</p>
+            <h3 style='margin-top: 0; color: #8e44ad;'>🔄 Aapke Purane Apps</h3>
+            <p style='font-size: 13px; color: #555; margin-bottom: 10px;'>Update ke liye app par click karein. Hatane ke liye 🗑️ dabayein.</p>
             <div id='savedAppsList'></div>
         </div>
         <br>
@@ -39,18 +71,16 @@ app.get('/', (req, res) => {
             <label style='font-weight: bold; color: #333;'>Website Link:</label><br>
             <input type='url' id='appUrl' name='appUrl' placeholder='https://...' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
             
-            <!-- NAYA: Image Preview Feature for App Icon -->
             <label style='font-weight: bold; color: #d35400;'>1. App Icon (Bahar ka photo):</label><br>
             <div style='display: flex; align-items: center; gap: 15px; margin: 8px 0 15px 0;'>
                 <input type='file' name='appIcon' accept='image/*' required style='width: 100%;' onchange='previewImage(event, "iconPreview")'>
-                <img id='iconPreview' style='display:none; width: 50px; height: 50px; border-radius: 8px; border: 1px solid #ccc; object-fit: cover; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'/>
+                <img id='iconPreview' style='display:none; width: 50px; height: 50px; border-radius: 8px; border: 1px solid #ccc; object-fit: cover;'/>
             </div>
 
-            <!-- NAYA: Image Preview Feature for Splash Logo -->
             <label style='font-weight: bold; color: #d35400;'>2. Splash Screen Logo (Andar ka photo):</label><br>
             <div style='display: flex; align-items: center; gap: 15px; margin: 8px 0 15px 0;'>
                 <input type='file' name='splashLogo' accept='image/*' required style='width: 100%;' onchange='previewImage(event, "splashPreview")'>
-                <img id='splashPreview' style='display:none; width: 50px; height: 50px; border-radius: 8px; border: 1px solid #ccc; object-fit: cover; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'/>
+                <img id='splashPreview' style='display:none; width: 50px; height: 50px; border-radius: 8px; border: 1px solid #ccc; object-fit: cover;'/>
             </div>
             
             <hr style='border: 1px solid #eee; margin: 20px 0;'>
@@ -81,28 +111,31 @@ app.get('/', (req, res) => {
             <button type='submit' style='margin-top: 10px; padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0px 4px 6px rgba(39,174,96,0.3);'>🚀 Build Master App</button>
         </form>
 
+        <div id="toast"></div>
+
         <script>
-            // NAYA: Photo select karte hi preview dikhane wala function
+            function showToast(msg, color) {
+                var t = document.getElementById("toast");
+                t.innerText = msg;
+                t.style.backgroundColor = color || "#27ae60"; // Default green
+                t.className = "show";
+                setTimeout(function(){ t.className = t.className.replace("show", ""); }, 3000);
+            }
+
             function previewImage(event, previewId) {
                 var output = document.getElementById(previewId);
                 if(event.target.files && event.target.files[0]) {
                     output.src = URL.createObjectURL(event.target.files[0]);
-                    output.style.display = 'block'; // Photo dikhao
-                } else {
-                    output.style.display = 'none'; // Photo chupa lo
-                }
+                    output.style.display = 'block';
+                } else { output.style.display = 'none'; }
             }
 
             function saveApp() {
                 var app = {
-                    appName: document.getElementById('appName').value,
-                    appUrl: document.getElementById('appUrl').value,
-                    packageName: document.getElementById('packageName').value,
-                    splashColor: document.getElementById('splashColor').value,
-                    themeColor: document.getElementById('themeColor').value,
-                    admobAppId: document.getElementById('admobAppId').value,
-                    admobBannerId: document.getElementById('admobBannerId').value,
-                    onesignalAppId: document.getElementById('onesignalAppId').value
+                    appName: document.getElementById('appName').value, appUrl: document.getElementById('appUrl').value,
+                    packageName: document.getElementById('packageName').value, splashColor: document.getElementById('splashColor').value,
+                    themeColor: document.getElementById('themeColor').value, admobAppId: document.getElementById('admobAppId').value,
+                    admobBannerId: document.getElementById('admobBannerId').value, onesignalAppId: document.getElementById('onesignalAppId').value
                 };
                 var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
                 var existingIndex = apps.findIndex(a => a.packageName === app.packageName);
@@ -110,32 +143,53 @@ app.get('/', (req, res) => {
                 localStorage.setItem('myBuilderApps', JSON.stringify(apps));
             }
 
+            function deleteApp(packageName, event) {
+                event.stopPropagation(); 
+                var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
+                apps = apps.filter(a => a.packageName !== packageName);
+                localStorage.setItem('myBuilderApps', JSON.stringify(apps));
+                loadApps();
+                showToast("🗑️ App history se delete ho gaya!", "#e74c3c");
+            }
+
             function loadApps() {
                 var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
                 var container = document.getElementById('savedAppsList');
                 if(apps.length === 0) {
-                    container.innerHTML = '<p style="color:#e74c3c; font-size:14px; font-weight:bold;">Abhi tak koi app save nahi hai.</p>';
+                    container.innerHTML = '<p style="color:#7f8c8d; font-size:14px; font-style:italic;">Abhi tak koi app save nahi hai.</p>';
                     return;
                 }
                 container.innerHTML = '';
                 apps.forEach(function(app) {
-                    var btn = document.createElement('div');
-                    btn.innerHTML = '<b>📱 ' + app.appName + '</b><br><small style="color:#ddd;">' + app.packageName + '</small>';
-                    btn.style = 'background: #34495e; color: white; padding: 10px; margin: 5px; border-radius: 6px; cursor: pointer; display: inline-block; text-align: center;';
-                    btn.onclick = function() {
-                        document.getElementById('appName').value = app.appName;
-                        document.getElementById('appUrl').value = app.appUrl;
-                        document.getElementById('packageName').value = app.packageName;
-                        document.getElementById('splashColor').value = app.splashColor || '#FFFFFF';
-                        document.getElementById('themeColor').value = app.themeColor || '#FFFFFF';
-                        document.getElementById('admobAppId').value = app.admobAppId || '';
-                        document.getElementById('admobBannerId').value = app.admobBannerId || '';
-                        document.getElementById('onesignalAppId').value = app.onesignalAppId || '';
-                        alert('Details auto-fill ho gayi hain! Bas apni photos chunein aur Build dabayein.');
-                    };
-                    container.appendChild(btn);
+                    var card = document.createElement('div');
+                    card.className = 'app-card';
+                    card.innerHTML = \`
+                        <div onclick='fillData("\${app.packageName}")' style='padding-right: 30px;'>
+                            <b>📱 \${app.appName}</b><br>
+                            <small style="color:#bdc3c7;">\${app.packageName}</small>
+                        </div>
+                        <div class="del-btn" onclick='deleteApp("\${app.packageName}", event)'>🗑️</div>
+                    \`;
+                    container.appendChild(card);
                 });
             }
+
+            function fillData(pkg) {
+                var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
+                var app = apps.find(a => a.packageName === pkg);
+                if(app) {
+                    document.getElementById('appName').value = app.appName;
+                    document.getElementById('appUrl').value = app.appUrl;
+                    document.getElementById('packageName').value = app.packageName;
+                    document.getElementById('splashColor').value = app.splashColor || '#FFFFFF';
+                    document.getElementById('themeColor').value = app.themeColor || '#FFFFFF';
+                    document.getElementById('admobAppId').value = app.admobAppId || '';
+                    document.getElementById('admobBannerId').value = app.admobBannerId || '';
+                    document.getElementById('onesignalAppId').value = app.onesignalAppId || '';
+                    showToast("✅ Details auto-fill ho gayi hain!", "#2980b9");
+                }
+            }
+
             window.onload = loadApps;
         </script>
     </body></html>
@@ -190,7 +244,7 @@ app.post('/build', cpUpload, async (req, res) => {
                     let attempts = 0;
                     const checkInterval = setInterval(async () => {
                         attempts++;
-                        if (attempts > 35) { // ~6 min timeout
+                        if (attempts > 35) { 
                             clearInterval(checkInterval);
                             document.getElementById("statusText").innerText = "⚠️ Timeout Error!";
                             document.getElementById("statusText").style.color = "#d32f2f";
@@ -199,7 +253,6 @@ app.post('/build', cpUpload, async (req, res) => {
                             document.getElementById("errorBox").innerText = "Server bohot slow hai ya hang ho gaya hai. Kripya page refresh karke dobara try karein.";
                             return;
                         }
-                        
                         try {
                             const res = await fetch("/check-status/` + buildId + `");
                             const data = await res.json();
@@ -232,31 +285,23 @@ app.get('/check-status/:buildId', async (req, res) => {
     const githubUser = 'chandchand1514-blip';
     const repoName = 'My-App-Builder';
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-
     const urlRelease = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-release.apk";
     
     try {
         const response = await fetch(urlRelease, { method: 'HEAD' });
-        if (response.ok || response.status === 302) { 
-            return res.json({ ready: true, failed: false }); 
-        }
+        if (response.ok || response.status === 302) { return res.json({ ready: true, failed: false }); }
 
         if (GITHUB_TOKEN) {
             const runsUrl = "https://api.github.com/repos/" + githubUser + "/" + repoName + "/actions/runs?event=repository_dispatch&per_page=3";
             const runsRes = await fetch(runsUrl, {
                 headers: { 'Accept': 'application/vnd.github.v3+json', 'Authorization': "token " + GITHUB_TOKEN, 'User-Agent': 'AppBuilder-Node' }
             });
-            
             if (runsRes.ok) {
                 const runsData = await runsRes.json();
                 if (runsData.workflow_runs && runsData.workflow_runs.length > 0) {
                     const latestRun = runsData.workflow_runs[0];
                     if (latestRun.status === 'completed' && latestRun.conclusion === 'failure') {
-                        return res.json({ 
-                            ready: false, 
-                            failed: true, 
-                            reason: "Karan (Reason): GitHub engine photo ko process nahi kar paaya ya settings galat hain. Kripya doosri photo ke sath dobara try karein." 
-                        });
+                        return res.json({ ready: false, failed: true, reason: "Karan: GitHub engine photo ko process nahi kar paaya ya settings galat hain." });
                     }
                 }
             }
