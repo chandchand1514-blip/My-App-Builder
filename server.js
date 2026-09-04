@@ -47,6 +47,8 @@ app.get('/', (req, res) => {
         
         .error-text { color: #e74c3c; font-size: 13px; font-weight: bold; margin-top: -10px; margin-bottom: 15px; display: none; }
         .input-error { border: 2px solid #e74c3c !important; }
+        
+        input[type="color"] { border: 1px solid #ccc; border-radius: 5px; padding: 2px; }
     </style>
     </head>
     <body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3; margin:0;'>
@@ -78,10 +80,21 @@ app.get('/', (req, res) => {
                 <input type='file' name='splashLogo' accept='image/*' required style='width: 100%;' onchange='previewImage(event, "splashPreview")'>
                 <img id='splashPreview' style='display:none; width: 50px; height: 50px; border-radius: 8px; border: 1px solid #ccc; object-fit: cover;'/>
             </div>
+
+            <!-- NAYA: Design & Color Section -->
+            <div style='display: flex; gap: 15px; margin: 15px 0;'>
+                <div style='flex: 1;'>
+                    <label style='font-weight: bold; color: #333; font-size: 14px;'>🎨 Theme Color (Top Bar):</label><br>
+                    <input type='color' id='themeColor' name='themeColor' value='#000000' style='width: 100%; height: 40px; margin-top: 5px; cursor: pointer;'>
+                </div>
+                <div style='flex: 1;'>
+                    <label style='font-weight: bold; color: #333; font-size: 14px;'>🚀 Splash Color:</label><br>
+                    <input type='color' id='splashColor' name='splashColor' value='#ffffff' style='width: 100%; height: 40px; margin-top: 5px; cursor: pointer;'>
+                </div>
+            </div>
             
             <label style='font-weight: bold; color: #d35400; font-size: 14px;'>Package Name (Zaroori Hai):</label><br>
             <input type='text' id='packageName' name='packageName' placeholder='com.aapka.app' required style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;' oninput="validatePackageName(this)"><br>
-            <!-- NAYA ERROR BOX -->
             <div id="pkgErrorMsg" class="error-text">❌ Galat: Package name mein .1 ya sirf numbers use na karein. Alfaz (letters) use karein.</div>
 
             <button type='submit' style='padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%;'>🚀 Build Master App</button>
@@ -112,13 +125,10 @@ app.get('/', (req, res) => {
                 } else { output.style.display = 'none'; }
             }
 
-            // NAYA: Live Package Name Validation Check
             function validatePackageName(input) {
                 var val = input.value;
                 var errorBox = document.getElementById('pkgErrorMsg');
-                // Regex check karta hai ki har hissa (dot ke baad) letter se shuru ho
                 var regex = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/i;
-                
                 if (val.length > 0 && !regex.test(val)) {
                     input.classList.add('input-error');
                     errorBox.style.display = 'block';
@@ -160,6 +170,9 @@ app.get('/', (req, res) => {
                     document.getElementById('appName').value = app.appName;
                     document.getElementById('appUrl').value = app.appUrl;
                     document.getElementById('packageName').value = app.packageName;
+                    document.getElementById('themeColor').value = app.themeColor || '#000000';
+                    document.getElementById('splashColor').value = app.splashColor || '#ffffff';
+                    
                     showToast("✏️ Details form mein aa gayi hain. Edit karein!", "#3498db");
                     document.getElementById('buildForm').scrollIntoView({ behavior: 'smooth' });
                 }
@@ -179,13 +192,16 @@ app.get('/', (req, res) => {
                     } else if (app.status === 'ready' && app.downloadUrl) {
                         actionHtml = \`<a href="\${app.downloadUrl}" style="margin-top:10px; display:inline-block; background:#2ecc71; color:white; padding:8px 15px; border-radius:5px; text-decoration:none; font-size:14px; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">⬇️ Install App</a>\`;
                     } else if (app.status === 'failed') {
-                        actionHtml = \`<div style="margin-top:10px; font-size:13px; color:#e74c3c; font-weight:bold;">❌ Build Failed (Check Package Name)</div>\`;
+                        actionHtml = \`<div style="margin-top:10px; font-size:13px; color:#e74c3c; font-weight:bold;">❌ Build Failed</div>\`;
                     }
 
                     var card = document.createElement('div'); card.className = 'app-card';
+                    // Added a small color indicator block based on saved themeColor
+                    var colorIndicator = app.themeColor ? \`<span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:\${app.themeColor}; margin-right:5px; border: 1px solid #fff;"></span>\` : '';
+                    
                     card.innerHTML = \`
                     <div style='padding-right: 60px;'>
-                        <b>📱 \${app.appName}</b><br>
+                        <b>\${colorIndicator}📱 \${app.appName}</b><br>
                         <small style="color:#bdc3c7;">\${app.packageName}</small>
                     </div>
                     \${actionHtml}
@@ -200,17 +216,18 @@ app.get('/', (req, res) => {
             async function submitBuildForm(event) {
                 event.preventDefault();
                 
-                // NAYA: Submit hone se pehle check karo ki error box dikh raha hai ya nahi
                 var pkgInput = document.getElementById('packageName');
                 if (!validatePackageName(pkgInput)) {
                     showToast("❌ Kripya pehle Package Name theek karein!", "#e74c3c");
-                    return; // Form submit nahi hoga
+                    return; 
                 }
 
                 var appData = {
                     appName: document.getElementById('appName').value, 
                     appUrl: document.getElementById('appUrl').value,
                     packageName: document.getElementById('packageName').value,
+                    themeColor: document.getElementById('themeColor').value,
+                    splashColor: document.getElementById('splashColor').value,
                     status: 'building'
                 };
                 saveAppToLocal(appData);
@@ -274,7 +291,6 @@ app.get('/', (req, res) => {
                                 document.getElementById('downloadBtn').style.display = 'inline-block';
                             }
                         } else if (data.failed || attempts > 30) { 
-                            // 5 minute se zyada lag gaya toh timeout/fail
                             clearInterval(interval);
                             var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
                             var appIndex = apps.findIndex(a => a.packageName === packageName);
@@ -330,7 +346,14 @@ app.post('/build', cpUpload, async (req, res) => {
                 event_type: 'build-app',
                 client_payload: { 
                     appName, appUrl, appIconUrl: iconUrl, splashLogoUrl: splashUrl, buildId,
-                    config: { splashColor: splashColor || '#FFFFFF', themeColor: themeColor || '#FFFFFF', admobAppId: admobAppId || '', admobBannerId: admobBannerId || '', packageName: packageName, onesignalAppId: dummyOneSignalId }
+                    config: { 
+                        splashColor: splashColor || '#FFFFFF', 
+                        themeColor: themeColor || '#000000', 
+                        admobAppId: admobAppId || '', 
+                        admobBannerId: admobBannerId || '', 
+                        packageName: packageName, 
+                        onesignalAppId: dummyOneSignalId 
+                    }
                 }
             })
         });
@@ -361,13 +384,11 @@ app.get('/check-build/:buildId', async (req, res) => {
             }
         }
         
-        // Check if build actually failed in actions (basic check)
         const runRes = await fetch(`https://api.github.com/repos/${githubUser}/${repoName}/actions/runs`, {
             headers: { 'Authorization': "token " + GITHUB_TOKEN }
         });
         if (runRes.ok) {
             const runData = await runRes.json();
-            // Agar sabse latest workflow run fail ho gaya hai
             if(runData.workflow_runs && runData.workflow_runs.length > 0) {
                 const latestRun = runData.workflow_runs[0];
                 if (latestRun.conclusion === 'failure') {
