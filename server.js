@@ -1,4 +1,4 @@
-Const express = require('express');
+const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -214,7 +214,6 @@ app.get('/', (req, res) => {
 app.post('/api/send-push', async (req, res) => {
     const { appId, title, message, imageUrl } = req.body;
     
-    // NAYA: API Key ab GitHub se nahi, balki Render Environment se aayegi
     const SECRET_API_KEY = process.env.ONESIGNAL_API_KEY;
 
     if (!SECRET_API_KEY) {
