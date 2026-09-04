@@ -37,6 +37,10 @@ app.get('/', (req, res) => {
         .app-card:hover { transform: scale(1.02); }
         .del-btn { position: absolute; top: 10px; right: 10px; background: #e74c3c; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: 0.3s; }
         .del-btn:hover { background: #c0392b; }
+        
+        .modal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); align-items: center; justify-content: center; }
+        .modal-content { background-color: white; padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; text-align: center; box-shadow: 0px 10px 30px rgba(0,0,0,0.3); }
+        .spinner { border: 6px solid #f3f3f3; border-top: 6px solid #27ae60; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
     </style>
     </head>
     <body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3; margin:0;'>
@@ -48,7 +52,7 @@ app.get('/', (req, res) => {
         </div>
         <br>
 
-        <form action='/build' method='POST' enctype='multipart/form-data' onsubmit='saveApp()' style='background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 400px; max-width: 90%; margin: 0 auto;'>
+        <form id="buildForm" onsubmit="submitBuildForm(event)" enctype='multipart/form-data' style='background: white; padding: 25px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: left; width: 400px; max-width: 90%; margin: 0 auto;'>
             <h3 style='margin-top: 0; color: #2980b9;'>📱 Build New App</h3>
             
             <label style='font-weight: bold; color: #333;'>App ka Naam:</label><br>
@@ -75,6 +79,16 @@ app.get('/', (req, res) => {
             <button type='submit' style='padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%;'>🚀 Build Master App</button>
         </form>
 
+        <!-- NAYA: Waiting & Download Status Modal -->
+        <div id="buildStatusOverlay" class="modal">
+            <div class="modal-content">
+                <div id="spinner" class="spinner"></div>
+                <h3 id="loadingText" style="color:#e67e22; margin-top:0;">⏳ Aapka App Ban Raha Hai...<br><small style="color:#7f8c8d; font-size:13px; font-weight:normal;">Isme 3 se 5 minute lag sakte hain. Kripya page band na karein.</small></h3>
+                <a id="downloadBtn" href="#" style="display:none; padding:15px 40px; background:#27ae60; color:white; text-decoration:none; font-size:18px; font-weight:bold; border-radius:8px; margin-top:15px; width:100%; box-sizing:border-box;">⬇️ Download APK</a>
+                <button onclick="closeModal()" style="margin-top:20px; padding:10px 20px; border:none; background:#ccc; cursor:pointer; border-radius:5px; font-weight:bold;">Close Panel</button>
+            </div>
+        </div>
+
         <div id="toast"></div>
 
         <script>
@@ -91,6 +105,8 @@ app.get('/', (req, res) => {
                 } else { output.style.display = 'none'; }
             }
 
+            function closeModal() { document.getElementById('buildStatusOverlay').style.display='none'; }
+
             function saveApp() {
                 var app = {
                     appName: document.getElementById('appName').value, 
@@ -101,6 +117,7 @@ app.get('/', (req, res) => {
                 var existingIndex = apps.findIndex(a => a.packageName === app.packageName);
                 if(existingIndex >= 0) { apps[existingIndex] = app; } else { apps.push(app); }
                 localStorage.setItem('myBuilderApps', JSON.stringify(apps));
+                loadApps();
             }
 
             function deleteApp(packageName, event) {
@@ -135,6 +152,54 @@ app.get('/', (req, res) => {
                 }
             }
 
+            // NAYA: Background Build Submission Logic
+            async function submitBuildForm(event) {
+                event.preventDefault();
+                saveApp();
+                
+                const form = document.getElementById('buildForm');
+                const formData = new FormData(form);
+
+                // Show Waiting Panel
+                document.getElementById('buildStatusOverlay').style.display = 'flex';
+                document.getElementById('spinner').style.display = 'block';
+                document.getElementById('downloadBtn').style.display = 'none';
+                document.getElementById('loadingText').innerHTML = "⏳ Aapka App Ban Raha Hai...<br><small style='color:#7f8c8d; font-size:13px; font-weight:normal;'>Isme 3 se 5 minute lag sakte hain. Kripya page band na karein.</small>";
+
+                try {
+                    const response = await fetch('/build', { method: 'POST', body: formData });
+                    const data = await response.json();
+                    
+                    if(data.success) {
+                        checkBuildStatus(data.buildId); // Polling shuru karega
+                    } else {
+                        showToast("❌ Error: " + data.error, "#e74c3c");
+                        closeModal();
+                    }
+                } catch(e) {
+                    showToast("❌ Error: " + e.message, "#e74c3c");
+                    closeModal();
+                }
+            }
+
+            // NAYA: Live Status Checker Logic
+            function checkBuildStatus(buildId) {
+                const interval = setInterval(async () => {
+                    try {
+                        const res = await fetch('/check-build/' + buildId);
+                        const data = await res.json();
+                        
+                        if(data.ready) {
+                            clearInterval(interval); // Checking band karein
+                            document.getElementById('spinner').style.display = 'none';
+                            document.getElementById('loadingText').innerHTML = "✅ Aapka App Ready Hai!";
+                            document.getElementById('downloadBtn').href = data.downloadUrl;
+                            document.getElementById('downloadBtn').style.display = 'inline-block';
+                        }
+                    } catch(e) { console.log("Checking...", e); }
+                }, 10000); // Har 10 second mein API check karega
+            }
+
             window.onload = loadApps;
         </script>
     </body></html>
@@ -145,8 +210,6 @@ const cpUpload = upload.fields([{ name: 'appIcon', maxCount: 1 }, { name: 'splas
 
 app.post('/build', cpUpload, async (req, res) => {
     const { appName, appUrl, splashColor, themeColor, packageName, admobAppId, admobBannerId } = req.body;
-    
-    // GitHub Action error se bachne ke liye blank ID bhej di gayi hai
     const dummyOneSignalId = '00000000-0000-0000-0000-000000000000'; 
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
     const githubUser = 'chandchand1514-blip';
@@ -156,8 +219,6 @@ app.post('/build', cpUpload, async (req, res) => {
     let iconUrl = ''; let splashUrl = '';
     if (req.files['appIcon']) { iconUrl = 'https://' + req.get('host') + '/logos/' + req.files['appIcon'][0].filename; }
     if (req.files['splashLogo']) { splashUrl = 'https://' + req.get('host') + '/logos/' + req.files['splashLogo'][0].filename; }
-
-    const downloadUrl = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-release.apk";
 
     try {
         const response = await fetch("https://api.github.com/repos/" + githubUser + "/" + repoName + "/dispatches", {
@@ -173,12 +234,37 @@ app.post('/build', cpUpload, async (req, res) => {
         });
 
         if (response.ok) {
-            res.send(`<html><body style="font-family:Arial;text-align:center;padding:50px;background:#eef2f3;">
-                <h2 id="statusText" style="color: #e67e22;">⏳ Aapka Master App Ban Raha Hai...</h2>
-                <a id="downloadBtn" href="` + downloadUrl + `" style="padding:15px 40px;background:#27ae60;color:white;text-decoration:none;font-size:20px;font-weight:bold;border-radius:8px;">⬇️ Download APK</a>
-            </body></html>`);
+            // NAYA: Ab naya page open nahi hoga, sirf Success JSON bhejega
+            res.json({ success: true, buildId: buildId });
+        } else {
+            res.json({ success: false, error: "GitHub action trigger nahi ho paya." });
         }
-    } catch (error) { res.send("<h3>❌ Error: " + error.message + "</h3>"); }
+    } catch (error) { res.json({ success: false, error: error.message }); }
+});
+
+// NAYA: GitHub API Check Route (Mera download link release hua ya nahi?)
+app.get('/check-build/:buildId', async (req, res) => {
+    const buildId = req.params.buildId;
+    const githubUser = 'chandchand1514-blip';
+    const repoName = 'My-App-Builder';
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
+    try {
+        const response = await fetch("https://api.github.com/repos/" + githubUser + "/" + repoName + "/releases/tags/build-" + buildId, {
+            headers: { 'Authorization': "token " + GITHUB_TOKEN }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            // Agar release ban chuki hai aur apk upload ho gaya hai
+            if (data.assets && data.assets.length > 0) {
+                return res.json({ ready: true, downloadUrl: data.assets[0].browser_download_url });
+            }
+        }
+        res.json({ ready: false });
+    } catch (error) {
+        res.json({ ready: false });
+    }
 });
 
 app.listen(port, () => { console.log("Server running on port " + port); });
