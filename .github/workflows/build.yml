@@ -51,6 +51,13 @@ jobs:
           if [[ "$PKG" != *"."* ]] && [ -n "$PKG" ]; then PKG="com.${PKG}.app"; fi
           if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
           PKG_DIR=$(echo "$PKG" | tr '.' '/')
+          
+          # NAYA FIX: Auto-fill Test AdMob ID if empty to prevent White Screen Crash
+          ADMOB_APP_ID="${{ github.event.client_payload.config.admobAppId }}"
+          if [ -z "$ADMOB_APP_ID" ]; then ADMOB_APP_ID="ca-app-pub-3940256099942544~3347511713"; fi
+          
+          ADMOB_BANNER_ID="${{ github.event.client_payload.config.admobBannerId }}"
+          if [ -z "$ADMOB_BANNER_ID" ]; then ADMOB_BANNER_ID="ca-app-pub-3940256099942544/6300978111"; fi
 
           mkdir -p "app/src/main/java/$PKG_DIR"
           mkdir -p app/src/main/res/values
@@ -128,15 +135,16 @@ jobs:
               <uses-permission android:name="android.permission.CAMERA" />
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-              <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar" android:usesCleartextTraffic="true">
-                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${{ github.event.client_payload.config.admobAppId }}"/>
+              <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar" android:usesCleartextTraffic="true" android:hardwareAccelerated="true">
+                  <!-- INJECTED SAFE ADMOB ID -->
+                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="$ADMOB_APP_ID"/>
                   <activity android:name=".SplashActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                   </activity>
-                  <activity android:name=".MainActivity" android:exported="true" />
+                  <activity android:name=".MainActivity" android:exported="true" android:hardwareAccelerated="true" android:configChanges="orientation|screenSize" />
               </application>
           </manifest>
           EOF
@@ -147,7 +155,7 @@ jobs:
           
           cat << 'EOF' > app/src/main/assets/no_internet.html
           <html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;text-align:center;background:#f8f9fa;">
-          <div><h1 style="color:#d35400;">Connection Error</h1><p>Kripya apna internet check karein ya thodi der baad koshish karein.</p></div>
+          <div><h1 style="color:#d35400;">Loading Issue</h1><p>Website load nahi ho pa rahi hai. Kripya connection check karein.</p></div>
           </body></html>
           EOF
           
@@ -166,10 +174,10 @@ jobs:
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               xmlns:ads="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="${{ github.event.client_payload.config.themeColor }}">
-              <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+              <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layerType="hardware" />
               <com.google.android.gms.ads.AdView
                   android:id="@+id/adView" android:layout_width="match_parent" android:layout_height="wrap_content"
-                  ads:adSize="BANNER" ads:adUnitId="${{ github.event.client_payload.config.admobBannerId }}" />
+                  ads:adSize="BANNER" ads:adUnitId="$ADMOB_BANNER_ID" />
           </LinearLayout>
           EOF
           
@@ -197,7 +205,7 @@ jobs:
           
           cat << EOF > "app/src/main/java/$PKG_DIR/MainActivity.java"
           package $PKG;
-          import android.Manifest; import android.app.Activity; import android.content.pm.PackageManager; import android.os.Build; import android.os.Bundle; import android.webkit.GeolocationPermissions; import android.webkit.PermissionRequest; import android.webkit.WebChromeClient; import android.webkit.WebSettings; import android.webkit.WebView; import android.webkit.WebViewClient; import android.webkit.CookieManager; import android.webkit.SslErrorHandler; import android.net.http.SslError; import java.util.ArrayList; import java.util.List; import android.graphics.Color; import android.view.View;
+          import android.Manifest; import android.app.Activity; import android.content.pm.PackageManager; import android.os.Build; import android.os.Bundle; import android.webkit.GeolocationPermissions; import android.webkit.PermissionRequest; import android.webkit.WebChromeClient; import android.webkit.WebSettings; import android.webkit.WebView; import android.webkit.WebViewClient; import android.webkit.CookieManager; import android.webkit.SslErrorHandler; import android.net.http.SslError; import android.webkit.WebResourceError; import android.webkit.WebResourceRequest; import java.util.ArrayList; import java.util.List; import android.graphics.Color; import android.view.View;
           import com.google.android.gms.ads.MobileAds; import com.google.android.gms.ads.AdRequest; import com.google.android.gms.ads.AdView;
           import com.onesignal.OneSignal;
           import android.net.ConnectivityManager; import android.net.NetworkInfo; import android.content.Context;
@@ -226,24 +234,43 @@ jobs:
                   mAdView.loadAd(adRequest);
 
                   WebView webView = findViewById(R.id.webview);
+                  
                   WebSettings webSettings = webView.getSettings();
                   webSettings.setJavaScriptEnabled(true); 
                   webSettings.setDomStorageEnabled(true);
                   webSettings.setDatabaseEnabled(true); 
+                  webSettings.setAllowFileAccess(true);
+                  webSettings.setAllowContentAccess(true);
+                  webSettings.setLoadWithOverviewMode(true);
+                  webSettings.setUseWideViewPort(true);
                   webSettings.setMediaPlaybackRequiresUserGesture(false); 
                   webSettings.setGeolocationEnabled(true);
-                  
-                  // WHITE SCREEN FIXES (Important for heavy sites)
                   webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-                  webSettings.setUserAgentString("Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Mobile Safari/537.36");
+                  webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  webSettings.setBuiltInZoomControls(true);
+                  webSettings.setDisplayZoomControls(false);
+                  
+                  webSettings.setUserAgentString("Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36");
                   CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
                   
                   webView.setWebViewClient(new WebViewClient() {
-                      @Override public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                          view.loadUrl("file:///android_asset/no_internet.html");
+                      @Override
+                      public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                          if (request != null && request.isForMainFrame()) {
+                               view.loadUrl("file:///android_asset/no_internet.html");
+                          }
                       }
-                      @Override public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                          handler.proceed(); // Bypass SSL security errors
+                      
+                      @Override 
+                      public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                          if(failingUrl.equals("${{ github.event.client_payload.appUrl }}")) {
+                              view.loadUrl("file:///android_asset/no_internet.html");
+                          }
+                      }
+
+                      @Override 
+                      public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
+                          handler.proceed(); 
                       }
                   });
 
@@ -301,4 +328,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "White Screen Bypass Update."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "AdMob Crash Full Fix Update."
