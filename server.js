@@ -44,6 +44,9 @@ app.get('/', (req, res) => {
         .modal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); align-items: center; justify-content: center; }
         .modal-content { background-color: white; padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; text-align: center; box-shadow: 0px 10px 30px rgba(0,0,0,0.3); }
         .spinner { border: 6px solid #f3f3f3; border-top: 6px solid #27ae60; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+        
+        .error-text { color: #e74c3c; font-size: 13px; font-weight: bold; margin-top: -10px; margin-bottom: 15px; display: none; }
+        .input-error { border: 2px solid #e74c3c !important; }
     </style>
     </head>
     <body style='font-family: Arial; padding: 20px; text-align: center; background: #eef2f3; margin:0;'>
@@ -77,7 +80,9 @@ app.get('/', (req, res) => {
             </div>
             
             <label style='font-weight: bold; color: #d35400; font-size: 14px;'>Package Name (Zaroori Hai):</label><br>
-            <input type='text' id='packageName' name='packageName' placeholder='com.aapka.app' required style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;'><br>
+            <input type='text' id='packageName' name='packageName' placeholder='com.aapka.app' required style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;' oninput="validatePackageName(this)"><br>
+            <!-- NAYA ERROR BOX -->
+            <div id="pkgErrorMsg" class="error-text">❌ Galat: Package name mein .1 ya sirf numbers use na karein. Alfaz (letters) use karein.</div>
 
             <button type='submit' style='padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%;'>🚀 Build Master App</button>
         </form>
@@ -105,6 +110,24 @@ app.get('/', (req, res) => {
                 if(event.target.files && event.target.files[0]) {
                     output.src = URL.createObjectURL(event.target.files[0]); output.style.display = 'block';
                 } else { output.style.display = 'none'; }
+            }
+
+            // NAYA: Live Package Name Validation Check
+            function validatePackageName(input) {
+                var val = input.value;
+                var errorBox = document.getElementById('pkgErrorMsg');
+                // Regex check karta hai ki har hissa (dot ke baad) letter se shuru ho
+                var regex = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/i;
+                
+                if (val.length > 0 && !regex.test(val)) {
+                    input.classList.add('input-error');
+                    errorBox.style.display = 'block';
+                    return false;
+                } else {
+                    input.classList.remove('input-error');
+                    errorBox.style.display = 'none';
+                    return true;
+                }
             }
 
             function closeModal() { document.getElementById('buildStatusOverlay').style.display='none'; }
@@ -155,6 +178,8 @@ app.get('/', (req, res) => {
                         actionHtml = \`<div style="margin-top:10px; font-size:13px; color:#f1c40f; font-weight:bold;">⏳ Building... (Wait)</div>\`;
                     } else if (app.status === 'ready' && app.downloadUrl) {
                         actionHtml = \`<a href="\${app.downloadUrl}" style="margin-top:10px; display:inline-block; background:#2ecc71; color:white; padding:8px 15px; border-radius:5px; text-decoration:none; font-size:14px; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">⬇️ Install App</a>\`;
+                    } else if (app.status === 'failed') {
+                        actionHtml = \`<div style="margin-top:10px; font-size:13px; color:#e74c3c; font-weight:bold;">❌ Build Failed (Check Package Name)</div>\`;
                     }
 
                     var card = document.createElement('div'); card.className = 'app-card';
@@ -175,6 +200,13 @@ app.get('/', (req, res) => {
             async function submitBuildForm(event) {
                 event.preventDefault();
                 
+                // NAYA: Submit hone se pehle check karo ki error box dikh raha hai ya nahi
+                var pkgInput = document.getElementById('packageName');
+                if (!validatePackageName(pkgInput)) {
+                    showToast("❌ Kripya pehle Package Name theek karein!", "#e74c3c");
+                    return; // Form submit nahi hoga
+                }
+
                 var appData = {
                     appName: document.getElementById('appName').value, 
                     appUrl: document.getElementById('appUrl').value,
@@ -217,17 +249,17 @@ app.get('/', (req, res) => {
             }
 
             function checkBuildStatus(buildId, packageName) {
+                let attempts = 0;
                 const interval = setInterval(async () => {
+                    attempts++;
                     try {
                         const res = await fetch('/check-build/' + buildId);
                         const data = await res.json();
                         
                         if(data.ready) {
                             clearInterval(interval);
-                            
                             var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
                             var appIndex = apps.findIndex(a => a.packageName === packageName);
-                            
                             if(appIndex >= 0) {
                                 apps[appIndex].status = 'ready';
                                 apps[appIndex].downloadUrl = data.downloadUrl;
@@ -235,13 +267,24 @@ app.get('/', (req, res) => {
                                 loadApps(); 
                                 showToast("🎉 " + apps[appIndex].appName + " Ready hai!", "#27ae60");
                             }
-
                             if(document.getElementById('buildStatusOverlay').style.display === 'flex') {
                                 document.getElementById('spinner').style.display = 'none';
                                 document.getElementById('loadingText').innerHTML = "✅ Aapka App Ready Hai!";
                                 document.getElementById('downloadBtn').href = data.downloadUrl;
                                 document.getElementById('downloadBtn').style.display = 'inline-block';
                             }
+                        } else if (data.failed || attempts > 30) { 
+                            // 5 minute se zyada lag gaya toh timeout/fail
+                            clearInterval(interval);
+                            var apps = JSON.parse(localStorage.getItem('myBuilderApps') || '[]');
+                            var appIndex = apps.findIndex(a => a.packageName === packageName);
+                            if(appIndex >= 0) {
+                                apps[appIndex].status = 'failed';
+                                localStorage.setItem('myBuilderApps', JSON.stringify(apps));
+                                loadApps();
+                                showToast("❌ Build fail ho gaya. GitHub Actions dekhein.", "#e74c3c");
+                            }
+                            closeModal();
                         }
                     } catch(e) { console.log("Checking API..."); }
                 }, 10000); 
@@ -317,6 +360,22 @@ app.get('/check-build/:buildId', async (req, res) => {
                 return res.json({ ready: true, downloadUrl: data.assets[0].browser_download_url });
             }
         }
+        
+        // Check if build actually failed in actions (basic check)
+        const runRes = await fetch(`https://api.github.com/repos/${githubUser}/${repoName}/actions/runs`, {
+            headers: { 'Authorization': "token " + GITHUB_TOKEN }
+        });
+        if (runRes.ok) {
+            const runData = await runRes.json();
+            // Agar sabse latest workflow run fail ho gaya hai
+            if(runData.workflow_runs && runData.workflow_runs.length > 0) {
+                const latestRun = runData.workflow_runs[0];
+                if (latestRun.conclusion === 'failure') {
+                    return res.json({ ready: false, failed: true });
+                }
+            }
+        }
+        
         res.json({ ready: false });
     } catch (error) {
         res.json({ ready: false });
