@@ -21,6 +21,7 @@ app.use(express.static('public'));
 app.get('/', (req, res) => {
     res.send(`
     <html><head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         @keyframes spin { 100% { transform: rotate(360deg); } }
         #toast { visibility: hidden; min-width: 280px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); box-shadow: 0px 5px 15px rgba(0,0,0,0.3); font-size: 16px; font-weight: bold; }
@@ -56,10 +57,10 @@ app.get('/', (req, res) => {
             <h3 style='margin-top: 0; color: #2980b9;'>📱 Build New App</h3>
             
             <label style='font-weight: bold; color: #333;'>App ka Naam:</label><br>
-            <input type='text' id='appName' name='appName' placeholder='Ex: DesiStore' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='text' id='appName' name='appName' placeholder='Ex: DesiStore' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;'><br>
             
             <label style='font-weight: bold; color: #333;'>Website Link:</label><br>
-            <input type='url' id='appUrl' name='appUrl' placeholder='https://...' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='url' id='appUrl' name='appUrl' placeholder='https://...' required style='padding:10px; margin:8px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;'><br>
             
             <label style='font-weight: bold; color: #d35400;'>1. App Icon:</label><br>
             <div style='display: flex; align-items: center; gap: 15px; margin: 8px 0 15px 0;'>
@@ -74,10 +75,10 @@ app.get('/', (req, res) => {
             </div>
             
             <label style='font-weight: bold; color: #d35400; font-size: 14px;'>Package Name (Zaroori Hai):</label><br>
-            <input type='text' id='packageName' name='packageName' placeholder='com.aapka.app' required style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='text' id='packageName' name='packageName' placeholder='com.aapka.app' required style='padding:8px; margin:5px 0 10px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;'><br>
 
             <label style='font-weight: bold; color: #555; font-size: 14px;'>OneSignal App ID:</label><br>
-            <input type='text' id='onesignalAppId' name='onesignalAppId' placeholder='UUID format...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px;'><br>
+            <input type='text' id='onesignalAppId' name='onesignalAppId' placeholder='UUID format...' style='padding:8px; margin:5px 0 15px 0; width: 100%; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;'><br>
 
             <button type='submit' style='padding:15px; background: #27ae60; color:white; border:none; border-radius: 5px; cursor:pointer; font-size: 16px; font-weight: bold; width: 100%;'>🚀 Build Master App</button>
         </form>
@@ -180,9 +181,7 @@ app.get('/', (req, res) => {
                     showToast("⚠️ Kripya Title aur Message bharein!", "#e74c3c");
                     return;
                 }
-
                 showToast("⏳ Notification bheja ja raha hai...", "#f39c12");
-
                 try {
                     const response = await fetch('/api/send-push', {
                         method: 'POST',
@@ -204,7 +203,6 @@ app.get('/', (req, res) => {
                     showToast("❌ API Key Render mein missing hai!", "#e74c3c");
                 }
             }
-
             window.onload = loadApps;
         </script>
     </body></html>
@@ -213,7 +211,6 @@ app.get('/', (req, res) => {
 
 app.post('/api/send-push', async (req, res) => {
     const { appId, title, message, imageUrl } = req.body;
-    
     const SECRET_API_KEY = process.env.ONESIGNAL_API_KEY;
 
     if (!SECRET_API_KEY) {
@@ -234,10 +231,7 @@ app.post('/api/send-push', async (req, res) => {
 
         const response = await fetch('https://onesignal.com/api/v1/notifications', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Basic ' + SECRET_API_KEY
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + SECRET_API_KEY },
             body: JSON.stringify(payload)
         });
         const data = await response.json();
@@ -262,8 +256,6 @@ app.post('/build', cpUpload, async (req, res) => {
     if (req.files['appIcon']) { iconUrl = 'https://' + req.get('host') + '/logos/' + req.files['appIcon'][0].filename; }
     if (req.files['splashLogo']) { splashUrl = 'https://' + req.get('host') + '/logos/' + req.files['splashLogo'][0].filename; }
 
-    const downloadUrl = "https://github.com/" + githubUser + "/" + repoName + "/releases/download/build-" + buildId + "/app-release.apk";
-
     try {
         const response = await fetch("https://api.github.com/repos/" + githubUser + "/" + repoName + "/dispatches", {
             method: 'POST',
@@ -278,12 +270,74 @@ app.post('/build', cpUpload, async (req, res) => {
         });
 
         if (response.ok) {
-            res.send(`<html><body style="font-family:Arial;text-align:center;padding:50px;background:#eef2f3;">
+            // NAYA: Ab download button chupa rahega aur spinner chalega jab tak github se response nahi aata
+            res.send(`
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body { font-family: Arial; text-align: center; padding: 50px 20px; background: #eef2f3; margin: 0; }
+                    .spinner { border: 6px solid #f3f3f3; border-top: 6px solid #e67e22; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                    .btn { display: none; padding: 15px 40px; background: #27ae60; color: white; text-decoration: none; font-size: 20px; font-weight: bold; border-radius: 8px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                </style>
+            </head>
+            <body>
+                <div id="spinner" class="spinner"></div>
                 <h2 id="statusText" style="color: #e67e22;">⏳ Aapka Master App Ban Raha Hai...</h2>
-                <a id="downloadBtn" href="` + downloadUrl + `" style="padding:15px 40px;background:#27ae60;color:white;text-decoration:none;font-size:20px;font-weight:bold;border-radius:8px;">⬇️ Download APK</a>
-            </body></html>`);
+                <p id="subText" style="color: #7f8c8d; font-size: 14px;">Isme 3 se 5 minute lag sakte hain. Kripya is page ko band na karein.</p>
+                <a id="downloadBtn" href="#" class="btn">⬇️ Download APK</a>
+                
+                <script>
+                    const buildId = "${buildId}";
+                    const interval = setInterval(async () => {
+                        try {
+                            const res = await fetch('/check-build/' + buildId);
+                            const data = await res.json();
+                            if(data.ready) {
+                                clearInterval(interval); // App ban gaya, spinner band karein
+                                document.getElementById('spinner').style.display = 'none';
+                                document.getElementById('statusText').innerText = "✅ Aapka App Ready Hai!";
+                                document.getElementById('statusText').style.color = "#27ae60";
+                                document.getElementById('subText').style.display = 'none';
+                                document.getElementById('downloadBtn').href = data.downloadUrl;
+                                document.getElementById('downloadBtn').style.display = 'inline-block';
+                            }
+                        } catch(e) { console.log("Checking API..."); }
+                    }, 10000); // Har 10 second mein check karega
+                </script>
+            </body>
+            </html>
+            `);
+        } else {
+            res.send("<h3>❌ Error: GitHub Action Start Nahi Hua. Token Check Karein.</h3>");
         }
     } catch (error) { res.send("<h3>❌ Error: " + error.message + "</h3>"); }
+});
+
+// NAYA: Background Status Checker
+app.get('/check-build/:buildId', async (req, res) => {
+    const buildId = req.params.buildId;
+    const githubUser = 'chandchand1514-blip';
+    const repoName = 'My-App-Builder';
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
+    try {
+        const response = await fetch("https://api.github.com/repos/" + githubUser + "/" + repoName + "/releases/tags/build-" + buildId, {
+            headers: { 'Authorization': "token " + GITHUB_TOKEN }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            // Agar download link aa gaya hai
+            if (data.assets && data.assets.length > 0) {
+                return res.json({ ready: true, downloadUrl: data.assets[0].browser_download_url });
+            }
+        }
+        res.json({ ready: false });
+    } catch (error) {
+        res.json({ ready: false });
+    }
 });
 
 app.listen(port, () => { console.log("Server running on port " + port); });
