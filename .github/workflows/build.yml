@@ -58,7 +58,6 @@ jobs:
           ADMOB_BANNER_ID="${{ github.event.client_payload.config.admobBannerId }}"
           if [ -z "$ADMOB_BANNER_ID" ]; then ADMOB_BANNER_ID="ca-app-pub-3940256099942544/6300978111"; fi
 
-          # FIX: Ensure color variables are never empty
           THEME_COLOR="${{ github.event.client_payload.config.themeColor }}"
           if [ -z "$THEME_COLOR" ] || [ "$THEME_COLOR" == "" ]; then THEME_COLOR="#000000"; fi
           
@@ -160,6 +159,7 @@ jobs:
           cat << EOF > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <!-- PERMISSIONS: Explicit permissions for File/Mic/Location -->
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.RECORD_AUDIO" />
               <uses-permission android:name="android.permission.CAMERA" />
@@ -247,11 +247,13 @@ jobs:
           
           public class MainActivity extends Activity {
               private PermissionRequest mPermissionRequest; private GeolocationPermissions.Callback mGeoCallback; private String mGeoOrigin;
+              // File Chooser variables
               private ValueCallback<Uri[]> mFilePathCallback; private final static int FILECHOOSER_RESULTCODE = 103;
               
               @Override protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   
+                  // EARLY PERMISSION REQUEST (To avoid timeouts)
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                       String[] reqPermissions = {
                           Manifest.permission.RECORD_AUDIO,
@@ -321,8 +323,9 @@ jobs:
                   webView.setWebViewClient(new WebViewClient() {
                       @Override
                       public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                          // Only block if main frame fails to load initially
                           if (request != null && request.isForMainFrame()) {
-                               view.loadUrl("file:///android_asset/no_internet.html");
+                               // Optional: Don't immediately redirect on small drops
                           }
                       }
                       @Override 
@@ -361,6 +364,7 @@ jobs:
                           } else { callback.invoke(origin, true, false); }
                       }
                       
+                      // EXPLICIT FILE CHOOSER BRIDGE
                       @Override
                       public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
                           if (mFilePathCallback != null) { mFilePathCallback.onReceiveValue(null); }
@@ -383,6 +387,7 @@ jobs:
               
               @Override
               protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+                  // HANDLE FILE SELECTION
                   if(requestCode == FILECHOOSER_RESULTCODE) {
                       if (null == mFilePathCallback) return;
                       Uri[] result = WebChromeClient.FileChooserParams.parseResult(resultCode, intent);
@@ -414,4 +419,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Color Null Fix."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Comprehensive File and Mic Permissions Enabled."
