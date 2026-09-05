@@ -52,7 +52,6 @@ jobs:
           if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
           PKG_DIR=$(echo "$PKG" | tr '.' '/')
           
-          # NAYA FIX: Auto-fill Test AdMob ID if empty to prevent White Screen Crash
           ADMOB_APP_ID="${{ github.event.client_payload.config.admobAppId }}"
           if [ -z "$ADMOB_APP_ID" ]; then ADMOB_APP_ID="ca-app-pub-3940256099942544~3347511713"; fi
           
@@ -61,6 +60,7 @@ jobs:
 
           mkdir -p "app/src/main/java/$PKG_DIR"
           mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/values-v31
           mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/mipmap-xxxhdpi
           mkdir -p app/src/main/res/drawable
@@ -127,17 +127,38 @@ jobs:
           }
           EOF
           
+          cat << EOF > app/src/main/res/values/themes.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+                  <item name="android:windowBackground">${{ github.event.client_payload.config.splashColor }}</item>
+                  <item name="android:statusBarColor">${{ github.event.client_payload.config.themeColor }}</item>
+              </style>
+          </resources>
+          EOF
+          
+          cat << EOF > app/src/main/res/values-v31/themes.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+                  <item name="android:windowSplashScreenBackground">${{ github.event.client_payload.config.splashColor }}</item>
+                  <item name="android:statusBarColor">${{ github.event.client_payload.config.themeColor }}</item>
+              </style>
+          </resources>
+          EOF
+          
           cat << EOF > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <!-- PERMISSIONS: Full access for Web Apps -->
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.RECORD_AUDIO" />
               <uses-permission android:name="android.permission.CAMERA" />
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-              <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar" android:usesCleartextTraffic="true" android:hardwareAccelerated="true">
-                  <!-- INJECTED SAFE ADMOB ID -->
-                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="$ADMOB_APP_ID"/>
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+              <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@style/AppTheme" android:usesCleartextTraffic="true" android:hardwareAccelerated="true">
+                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="\$ADMOB_APP_ID"/>
                   <activity android:name=".SplashActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -174,10 +195,11 @@ jobs:
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               xmlns:ads="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="${{ github.event.client_payload.config.themeColor }}">
-              <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layerType="hardware" />
+              <!-- FIX: Removed generic hardware layer type that was causing rendering conflicts -->
+              <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
               <com.google.android.gms.ads.AdView
                   android:id="@+id/adView" android:layout_width="match_parent" android:layout_height="wrap_content"
-                  ads:adSize="BANNER" ads:adUnitId="$ADMOB_BANNER_ID" />
+                  ads:adSize="BANNER" ads:adUnitId="\$ADMOB_BANNER_ID" />
           </LinearLayout>
           EOF
           
@@ -232,8 +254,11 @@ jobs:
                   AdView mAdView = findViewById(R.id.adView);
                   AdRequest adRequest = new AdRequest.Builder().build();
                   mAdView.loadAd(adRequest);
-
+                  
                   WebView webView = findViewById(R.id.webview);
+                  
+                  // FIX: Transparent background to let the website paint itself
+                  webView.setBackgroundColor(Color.TRANSPARENT);
                   
                   WebSettings webSettings = webView.getSettings();
                   webSettings.setJavaScriptEnabled(true); 
@@ -245,7 +270,12 @@ jobs:
                   webSettings.setUseWideViewPort(true);
                   webSettings.setMediaPlaybackRequiresUserGesture(false); 
                   webSettings.setGeolocationEnabled(true);
-                  webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+                  
+                  // FIX: Force mixed content bypass for rendering
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                     webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+                  }
+                  
                   webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
                   webSettings.setBuiltInZoomControls(true);
                   webSettings.setDisplayZoomControls(false);
@@ -260,14 +290,12 @@ jobs:
                                view.loadUrl("file:///android_asset/no_internet.html");
                           }
                       }
-                      
                       @Override 
                       public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                           if(failingUrl.equals("${{ github.event.client_payload.appUrl }}")) {
                               view.loadUrl("file:///android_asset/no_internet.html");
                           }
                       }
-
                       @Override 
                       public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                           handler.proceed(); 
@@ -328,4 +356,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "AdMob Crash Full Fix Update."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Stable Mixed Content Render Fix."
