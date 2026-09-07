@@ -1,4 +1,3 @@
-
 package com.app.builder
 
 import android.os.Bundle
@@ -6,6 +5,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import android.content.Intent
+import android.net.Uri
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,7 +20,7 @@ class MainActivity : AppCompatActivity() {
 
         // Download Listener
         webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, contentLength ->
-            val request = android.app.DownloadManager.Request(android.net.Uri.parse(url))
+            val request = android.app.DownloadManager.Request(Uri.parse(url))
             request.setMimeType(mimetype)
             request.addRequestHeader("cookie", android.webkit.CookieManager.getInstance().getCookie(url))
             request.addRequestHeader("User-Agent", userAgent)
@@ -33,16 +34,34 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(applicationContext, "Download shuru ho gaya hai...", Toast.LENGTH_SHORT).show()
         }
 
-        // Google Login & External Links Handler
+        // Google Login, Intent & External Links Handler
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                 val url = request?.url.toString()
-                if (url.contains("accounts.google.com") || url.startsWith("intent://") || url.startsWith("whatsapp://")) {
-                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                    startActivity(intent)
-                    return true
+                
+                if (url == null) return false
+
+                try {
+                    // Google Auth aur Intents ke liye
+                    if (url.startsWith("intent://")) {
+                        val intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
+                        val fallbackUrl = intent.getStringExtra("browser_fallback_url")
+                        if (fallbackUrl != null) {
+                            view?.loadUrl(fallbackUrl)
+                        } else {
+                            startActivity(intent)
+                        }
+                        return true
+                    } else if (url.contains("accounts.google.com") || url.startsWith("whatsapp://") || url.startsWith("mailto:")) {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        startActivity(intent)
+                        return true
+                    }
+                } catch (e: Exception) {
+                    return true // Error aane par page load hone se rokega
                 }
-                return false
+                
+                return false // Normal links ko app ke andar hi open karega
             }
         }
 
