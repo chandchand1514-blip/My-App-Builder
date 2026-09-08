@@ -253,15 +253,22 @@ jobs:
               
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
-                  try { window.statusBarColor = Color.parseColor("${THEME_COLOR}") } catch (e: Exception) {}
+                  try {
+                      window.statusBarColor = Color.parseColor("${THEME_COLOR}")
+                  } catch (e: Exception) {}
+                  
                   setContentView(R.layout.activity_main)
                   
-                  MobileAds.initialize(this) {}
-                  val mAdView = findViewById<AdView>(R.id.adView)
-                  mAdView.loadAd(AdRequest.Builder().build())
+                  try {
+                      MobileAds.initialize(this) {}
+                      val mAdView = findViewById<AdView>(R.id.adView)
+                      mAdView?.loadAd(AdRequest.Builder().build())
+                  } catch (e: Exception) {}
                   
                   val webView = findViewById<WebView>(R.id.webview)
-                  try { webView.setBackgroundColor(Color.parseColor("${BG_COLOR}")) } catch (e: Exception) {}
+                  try {
+                      webView.setBackgroundColor(Color.parseColor("${BG_COLOR}"))
+                  } catch (e: Exception) {}
                   
                   val ws = webView.settings
                   ws.javaScriptEnabled = true
@@ -309,12 +316,18 @@ jobs:
                       }
                   }
                   
-                  webView.loadUrl("${{ github.event.client_payload.appUrl }}")
+                  try {
+                      webView.loadUrl("${{ github.event.client_payload.appUrl }}")
+                  } catch (e: Exception) {
+                      webView.loadData("<html><body><h3>Error loading URL</h3></body></html>", "text/html", "UTF-8")
+                  }
               }
               
               override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
                   if (requestCode == FILECHOOSER_RESULTCODE) {
-                      mFilePathCallback?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, intent))
+                      try {
+                          mFilePathCallback?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, intent))
+                      } catch (e: Exception) {}
                       mFilePathCallback = null
                   }
                   super.onActivityResult(requestCode, resultCode, intent)
@@ -329,4 +342,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "App built successfully with SDK 33 and fixes."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "App built successfully with crash protection and fixes."
