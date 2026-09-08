@@ -18,6 +18,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 
+app.get('/build', (req, res) => {
+    res.redirect('/');
+});
+
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
