@@ -1,3 +1,231 @@
+name: Build APK Engine
+
+on:
+  repository_dispatch:
+    types: [build-app]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Permanent Keystore
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f "master.keystore" ]; then
+            keytool -genkey -v -keystore master.keystore -alias master_alias -keyalg RSA -keysize 2048 -validity 10000 -storepass master123 -keypass master123 -dname "CN=AppBuilder, O=Company, C=IN"
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add master.keystore
+            git commit -m "Added permanent keystore for seamless app updates"
+            git push
+          fi
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.4'
+
+      - name: Install Image Converter
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: Generate Master App Code
+        run: |
+          RAW_PKG="${{ github.event.client_payload.config.packageName }}"
+          PKG=$(echo "$RAW_PKG" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:].')
+          if [[ "$PKG" != *"."* ]] && [ -n "$PKG" ]; then PKG="com.${PKG}.app"; fi
+          if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
+          PKG_DIR=$(echo "$PKG" | tr '.' '/')
+          
+          ADMOB_APP_ID="${{ github.event.client_payload.config.admobAppId }}"
+          if [ -z "$ADMOB_APP_ID" ]; then ADMOB_APP_ID="ca-app-pub-3940256099942544~3347511713"; fi
+          
+          ADMOB_BANNER_ID="${{ github.event.client_payload.config.admobBannerId }}"
+          if [ -z "$ADMOB_BANNER_ID" ]; then ADMOB_BANNER_ID="ca-app-pub-3940256099942544/6300978111"; fi
+
+          THEME_COLOR="${{ github.event.client_payload.config.themeColor }}"
+          if [ -z "$THEME_COLOR" ] || [ "$THEME_COLOR" == "" ]; then THEME_COLOR="#000000"; fi
+          
+          SPLASH_COLOR="${{ github.event.client_payload.config.splashColor }}"
+          if [ -z "$SPLASH_COLOR" ] || [ "$SPLASH_COLOR" == "" ]; then SPLASH_COLOR="#ffffff"; fi
+          
+          BG_COLOR="${{ github.event.client_payload.config.backgroundColor }}"
+          if [ -z "$BG_COLOR" ] || [ "$BG_COLOR" == "" ]; then BG_COLOR="#ffffff"; fi
+
+          mkdir -p "app/src/main/java/$PKG_DIR"
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/values-v31
+          mkdir -p app/src/main/res/layout
+          mkdir -p app/src/main/res/mipmap-xxxhdpi
+          mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/assets
+          
+          cp master.keystore app/master.keystore
+          
+          curl -L "${{ github.event.client_payload.appIconUrl }}" -o temp_icon.img
+          convert temp_icon.img -resize 512x512 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          
+          curl -L "${{ github.event.client_payload.splashLogoUrl }}" -o temp_splash.img
+          convert temp_splash.img -resize 512x512 app/src/main/res/drawable/splash_logo.png
+          
+          cat << 'EOF' > gradle.properties
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          EOF
+          
+          cat << 'EOF' > settings.gradle
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          rootProject.name = "My-App-Builder"
+          include ':app'
+          EOF
+          
+          cat << 'EOF' > build.gradle
+          plugins { id 'com.android.application' version '8.1.0' apply false }
+          EOF
+          
+          cat << EOF > app/build.gradle
+          plugins { id 'com.android.application' }
+          android { 
+              namespace "$PKG"
+              compileSdk 34
+              signingConfigs {
+                  release {
+                      storeFile file("master.keystore")
+                      storePassword "master123"
+                      keyAlias "master_alias"
+                      keyPassword "master123"
+                  }
+              }
+              defaultConfig { 
+                  applicationId "$PKG"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes {
+                  release { signingConfig signingConfigs.release }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              implementation 'com.google.android.gms:play-services-ads:22.6.0'
+              implementation 'com.onesignal:OneSignal:4.8.7'
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+          }
+          EOF
+          
+          cat << EOF > app/src/main/res/values/themes.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+                  <item name="android:windowBackground">${SPLASH_COLOR}</item>
+                  <item name="android:statusBarColor">${THEME_COLOR}</item>
+              </style>
+          </resources>
+          EOF
+          
+          cat << EOF > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+              
+              <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@style/AppTheme" android:usesCleartextTraffic="true" android:hardwareAccelerated="true">
+                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${ADMOB_APP_ID}"/>
+                  <activity android:name=".SplashActivity" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+                  <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize" />
+              </application>
+          </manifest>
+          EOF
+          
+          cat << EOF > app/src/main/res/values/strings.xml
+          <resources><string name="app_name">${{ github.event.client_payload.appName }}</string></resources>
+          EOF
+          
+          cat << 'EOF' > app/src/main/assets/no_internet.html
+          <html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;text-align:center;background:#f8f9fa;">
+          <div><h1 style="color:#d35400;">Loading Issue</h1><p>Website load nahi ho pa rahi hai. Kripya connection check karein.</p></div>
+          </body></html>
+          EOF
+          
+          cat << EOF > app/src/main/res/layout/activity_splash.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent" android:layout_height="match_parent" 
+              android:background="${SPLASH_COLOR}">
+              <ImageView android:layout_width="250dp" android:layout_height="250dp" 
+                  android:layout_centerInParent="true" android:src="@drawable/splash_logo" />
+          </RelativeLayout>
+          EOF
+          
+          cat << EOF > app/src/main/res/layout/activity_main.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:ads="http://schemas.android.com/apk/res-auto"
+              android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="${BG_COLOR}">
+              <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+              <com.google.android.gms.ads.AdView
+                  android:id="@+id/adView" android:layout_width="match_parent" android:layout_height="wrap_content"
+                  ads:adSize="BANNER" ads:adUnitId="${ADMOB_BANNER_ID}" />
+          </LinearLayout>
+          EOF
+          
+          cat << EOF > "app/src/main/java/$PKG_DIR/SplashActivity.kt"
+          package $PKG
+          import android.app.Activity
+          import android.content.Intent
+          import android.os.Bundle
+          import android.os.Handler
+          import android.os.Looper
+          import android.graphics.Color
+          
+          class SplashActivity : Activity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  try { window.statusBarColor = Color.parseColor("${SPLASH_COLOR}") } catch (e: Exception) {}
+                  setContentView(R.layout.activity_splash)
+                  Handler(Looper.getMainLooper()).postDelayed({
+                      startActivity(Intent(this, MainActivity::class.java))
+                      finish()
+                  }, 2500)
+              }
+          }
+          EOF
+          
           cat << EOF > "app/src/main/java/$PKG_DIR/MainActivity.kt"
           package $PKG
           
@@ -60,13 +288,12 @@
                       webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                   }
                   
-                  // SAFE URL REDIRECT CLIENT
                   webView.webViewClient = object : WebViewClient() {
                       override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                           if (url != null && (url.contains("accounts.google.com") || url.contains("oauth") || url.startsWith("intent://"))) {
                               try {
                                   val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                  context.startActivity(intent)
+                                  startActivity(intent)
                                   return true
                               } catch (e: Exception) {
                                   return false
@@ -76,7 +303,6 @@
                       }
                   }
 
-                  // DOWNLOAD LISTENER
                   webView.setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
                       try {
                           val request = DownloadManager.Request(Uri.parse(url))
@@ -125,3 +351,12 @@
               }
           }
           EOF
+
+      - name: Build Android APK
+        run: gradle assembleRelease
+
+      - name: Create Direct Download Link
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Chrome OAuth and Download Manager Enabled."
