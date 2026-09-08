@@ -1,26 +1,27 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// HTML form se aane wale data ko read karne ke liye zaroori lines
+// Form data read karne ke liye zaroori middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Basic test route taaki Render error na de
+// Website ka main page (index.html) load karne ke liye
 app.get('/', (req, res) => {
-    res.send("App Builder Server Live Hai!");
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Main Build API jahan form submit hota hai
+// Main Build API jahan se APK process hoga
 app.post('/build', (req, res) => {
     const appName = req.body.appName || "My App";
     const appUrl = req.body.appUrl || "https://aapki-website.com";
     
-    // Checkbox ON/OFF values
+    // Checkbox ON/OFF values capture karna
     const isChromeLoginEnabled = req.body.enableChromeLogin === 'true';
     const isDownloadEnabled = req.body.enableDownload === 'true';
 
-    // Kotlin Android Code (Dynamic variables ke sath)
+    // Android Kotlin Code Template
     const mainActivityCode = `
 package com.app.builder
 
@@ -41,7 +42,6 @@ class MainActivity : AppCompatActivity() {
         val webView = WebView(this)
         setContentView(webView)
 
-        // Web Panel se set kiye gaye ON/OFF options
         val isChromeLoginEnabled = ${isChromeLoginEnabled}
         val isDownloadEnabled = ${isDownloadEnabled}
 
@@ -53,7 +53,6 @@ class MainActivity : AppCompatActivity() {
             userAgentString = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
         }
 
-        // --- DOWNLOAD SYSTEM ---
         if (isDownloadEnabled) {
             webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
                 val request = android.app.DownloadManager.Request(Uri.parse(url))
@@ -69,7 +68,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // --- GOOGLE LOGIN (Javascript Popups) ---
         webView.webChromeClient = object : WebChromeClient() {
             override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message?): Boolean {
                 val newWebView = WebView(this@MainActivity)
@@ -99,7 +97,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // --- GOOGLE LOGIN (Direct Links) & APP INTENTS ---
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url.toString()
@@ -140,13 +137,9 @@ class MainActivity : AppCompatActivity() {
 }
 `;
 
-    // YAHAN AAPKA GITHUB PUSH KAKNE WALA CODE AAYEGA 
-    // (Jo purane setup mein aap actions/API ko bhejte the)
-    
-    res.send("App ka code set ho gaya hai! Build shuru ho chuka hai.");
+    res.send("App successfully configured with your settings!");
 });
 
-// Render server ko start karne ke liye
 app.listen(port, () => {
-    console.log("Server port " + port + " par chal raha hai.");
+    console.log("Server running on port " + port);
 });
