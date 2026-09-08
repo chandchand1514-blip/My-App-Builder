@@ -1,15 +1,15 @@
 {
   "name": "my-app-builder",
   "version": "1.0.0",
-  "description": "Web to APK Builder API",
+  "description": "App Builder Node.js Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "archiver": "^6.0.1",
     "express": "^4.18.2",
-    "multer": "^1.4.5-lts.1",
-    "sharp": "^0.33.2"
+    "axios": "^1.6.2",
+    "mongoose": "^8.0.3",
+    "cors": "^2.8.5"
   }
 }
