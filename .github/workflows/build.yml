@@ -33,9 +33,6 @@ jobs:
             git push
           fi
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -251,7 +248,6 @@ jobs:
                   
                   setContentView(R.layout.activity_main)
                   
-                  // SAFE ADMOB (Crash-Proof)
                   try {
                       MobileAds.initialize(this) {}
                       val mAdView = AdView(this)
@@ -260,9 +256,7 @@ jobs:
                       val layout = findViewById<LinearLayout>(R.id.main_layout)
                       layout.addView(mAdView)
                       mAdView.loadAd(AdRequest.Builder().build())
-                  } catch (e: Exception) {
-                      // Agar Ad fails bhi hota hai, toh app crash nahi hoga!
-                  }
+                  } catch (e: Exception) {}
                   
                   val webView = findViewById<WebView>(R.id.webview)
                   try { webView.setBackgroundColor(Color.parseColor("${BG_COLOR}")) } catch (e: Exception) {}
