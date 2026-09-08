@@ -122,7 +122,6 @@ jobs:
                   versionName "1.0"
               }
               buildTypes {
-                  debug { signingConfig signingConfigs.release }
                   release { signingConfig signingConfigs.release }
               }
               compileOptions {
@@ -133,6 +132,9 @@ jobs:
           dependencies {
               implementation 'com.google.android.gms:play-services-ads:22.6.0'
               implementation 'com.onesignal:OneSignal:4.8.7'
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
           }
           EOF
           
@@ -146,33 +148,18 @@ jobs:
           </resources>
           EOF
           
-          cat << EOF > app/src/main/res/values-v31/themes.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
-                  <item name="android:windowSplashScreenBackground">${SPLASH_COLOR}</item>
-                  <item name="android:statusBarColor">${THEME_COLOR}</item>
-              </style>
-          </resources>
-          EOF
-          
           cat << EOF > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <!-- PERMISSIONS: Explicit permissions for File/Mic/Location -->
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.RECORD_AUDIO" />
               <uses-permission android:name="android.permission.CAMERA" />
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-              <uses-feature android:name="android.hardware.camera" android:required="false" />
-              <uses-feature android:name="android.hardware.microphone" android:required="false" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
               
               <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@style/AppTheme" android:usesCleartextTraffic="true" android:hardwareAccelerated="true">
-                  <!-- FIX: Removed backslash from AdMob variables to prevent crash -->
                   <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${ADMOB_APP_ID}"/>
                   <activity android:name=".SplashActivity" android:exported="true">
                       <intent-filter>
@@ -211,183 +198,160 @@ jobs:
               xmlns:ads="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="${BG_COLOR}">
               <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-              <!-- FIX: Removed backslash from Banner ID -->
               <com.google.android.gms.ads.AdView
                   android:id="@+id/adView" android:layout_width="match_parent" android:layout_height="wrap_content"
                   ads:adSize="BANNER" ads:adUnitId="${ADMOB_BANNER_ID}" />
           </LinearLayout>
           EOF
           
-          cat << EOF > "app/src/main/java/$PKG_DIR/SplashActivity.java"
-          package $PKG;
-          import android.app.Activity; import android.content.Intent; import android.os.Bundle; import android.os.Handler; import android.os.Looper; import android.graphics.Color; import android.view.View;
-          public class SplashActivity extends Activity {
-              @Override protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState); 
-                  try {
-                      String colorHex = "${SPLASH_COLOR}";
-                      int color = Color.parseColor(colorHex);
-                      getWindow().setStatusBarColor(color);
-                      double darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
-                      if (darkness < 0.5) { getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR); } 
-                      else { getWindow().getDecorView().setSystemUiVisibility(0); }
-                  } catch (Exception e) {}
-                  setContentView(R.layout.activity_splash);
-                  new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                      startActivity(new Intent(SplashActivity.this, MainActivity.class)); finish();
-                  }, 2500);
+          cat << EOF > "app/src/main/java/$PKG_DIR/SplashActivity.kt"
+          package $PKG
+          import android.app.Activity
+          import android.content.Intent
+          import android.os.Bundle
+          import android.os.Handler
+          import android.os.Looper
+          import android.graphics.Color
+          
+          class SplashActivity : Activity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  try { window.statusBarColor = Color.parseColor("${SPLASH_COLOR}") } catch (e: Exception) {}
+                  setContentView(R.layout.activity_splash)
+                  Handler(Looper.getMainLooper()).postDelayed({
+                      startActivity(Intent(this, MainActivity::class.java))
+                      finish()
+                  }, 2500)
               }
           }
           EOF
           
-          cat << EOF > "app/src/main/java/$PKG_DIR/MainActivity.java"
-          package $PKG;
-          import android.Manifest; import android.app.Activity; import android.content.Intent; import android.content.pm.PackageManager; import android.os.Build; import android.os.Bundle; import android.webkit.GeolocationPermissions; import android.webkit.PermissionRequest; import android.webkit.WebChromeClient; import android.webkit.WebSettings; import android.webkit.WebView; import android.webkit.WebViewClient; import android.webkit.CookieManager; import android.webkit.SslErrorHandler; import android.net.http.SslError; import android.webkit.WebResourceError; import android.webkit.WebResourceRequest; import java.util.ArrayList; import java.util.List; import android.graphics.Color; import android.view.View; import android.net.Uri; import android.webkit.ValueCallback; import android.provider.MediaStore; import java.io.File; import android.os.Environment;
-          import com.google.android.gms.ads.MobileAds; import com.google.android.gms.ads.AdRequest; import com.google.android.gms.ads.AdView;
-          import com.onesignal.OneSignal;
-          import android.net.ConnectivityManager; import android.net.NetworkInfo; import android.content.Context;
+          cat << EOF > "app/src/main/java/$PKG_DIR/MainActivity.kt"
+          package $PKG
           
-          public class MainActivity extends Activity {
-              private PermissionRequest mPermissionRequest; private GeolocationPermissions.Callback mGeoCallback; private String mGeoOrigin;
-              // File Chooser variables
-              private ValueCallback<Uri[]> mFilePathCallback; private final static int FILECHOOSER_RESULTCODE = 103;
+          import android.app.Activity
+          import android.app.DownloadManager
+          import android.content.Context
+          import android.content.Intent
+          import android.graphics.Color
+          import android.net.Uri
+          import android.os.Build
+          import android.os.Bundle
+          import android.os.Environment
+          import android.webkit.DownloadListener
+          import android.webkit.PermissionRequest
+          import android.webkit.URLUtil
+          import android.webkit.ValueCallback
+          import android.webkit.WebChromeClient
+          import android.webkit.WebSettings
+          import android.webkit.WebView
+          import android.webkit.WebViewClient
+          import android.widget.Toast
+          import com.google.android.gms.ads.AdRequest
+          import com.google.android.gms.ads.AdView
+          import com.google.android.gms.ads.MobileAds
+          
+          class MainActivity : Activity() {
+              private var mFilePathCallback: ValueCallback<Array<Uri>>? = null
+              private val FILECHOOSER_RESULTCODE = 103
               
-              @Override protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
                   
                   try {
-                      String colorHex = "${THEME_COLOR}";
-                      int color = Color.parseColor(colorHex);
-                      getWindow().setStatusBarColor(color);
-                      double darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
-                      if (darkness < 0.5) { getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR); } 
-                      else { getWindow().getDecorView().setSystemUiVisibility(0); }
-                  } catch (Exception e) {}
+                      window.statusBarColor = Color.parseColor("${THEME_COLOR}")
+                  } catch (e: Exception) {}
                   
-                  setContentView(R.layout.activity_main);
+                  setContentView(R.layout.activity_main)
                   
-                  OneSignal.initWithContext(this);
-                  OneSignal.setAppId("${{ github.event.client_payload.config.onesignalAppId }}");
+                  MobileAds.initialize(this) {}
+                  val mAdView = findViewById<AdView>(R.id.adView)
+                  mAdView.loadAd(AdRequest.Builder().build())
                   
-                  MobileAds.initialize(this, initializationStatus -> {});
-                  AdView mAdView = findViewById(R.id.adView);
-                  AdRequest adRequest = new AdRequest.Builder().build();
-                  mAdView.loadAd(adRequest);
-                  
-                  WebView webView = findViewById(R.id.webview);
-                  
+                  val webView = findViewById<WebView>(R.id.webview)
                   try {
-                      String bgColorHex = "${BG_COLOR}";
-                      webView.setBackgroundColor(Color.parseColor(bgColorHex));
-                  } catch (Exception e) {}
+                      webView.setBackgroundColor(Color.parseColor("${BG_COLOR}"))
+                  } catch (e: Exception) {}
                   
-                  WebSettings webSettings = webView.getSettings();
-                  webSettings.setJavaScriptEnabled(true); 
-                  webSettings.setDomStorageEnabled(true);
-                  webSettings.setDatabaseEnabled(true); 
-                  webSettings.setAllowFileAccess(true);
-                  webSettings.setAllowContentAccess(true);
-                  webSettings.setLoadWithOverviewMode(true);
-                  webSettings.setUseWideViewPort(true);
-                  webSettings.setMediaPlaybackRequiresUserGesture(false); 
-                  webSettings.setGeolocationEnabled(true);
+                  val webSettings = webView.settings
+                  webSettings.javaScriptEnabled = true
+                  webSettings.domStorageEnabled = true
+                  webSettings.databaseEnabled = true
+                  webSettings.allowFileAccess = true
+                  webSettings.allowContentAccess = true
+                  webSettings.loadWithOverviewMode = true
+                  webSettings.useWideViewPort = true
+                  webSettings.mediaPlaybackRequiresUserGesture = false
+                  webSettings.geolocationEnabled = true
                   
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                     webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+                      webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                   }
                   
-                  webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-                  webSettings.setBuiltInZoomControls(true);
-                  webSettings.setDisplayZoomControls(false);
-                  
-                  webSettings.setUserAgentString("Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36");
-                  CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
-                  
-                  webView.setWebViewClient(new WebViewClient() {
-                      @Override
-                      public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                          if (request != null && request.isForMainFrame()) {
-                               // No immediate redirect to avoid false offline blocks
-                          }
-                      }
-                      @Override 
-                      public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                          if(failingUrl.equals("${{ github.event.client_payload.appUrl }}")) {
-                              view.loadUrl("file:///android_asset/no_internet.html");
-                          }
-                      }
-                      @Override 
-                      public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                          handler.proceed(); 
-                      }
-                  });
-
-                  webView.setWebChromeClient(new WebChromeClient() {
-                      @Override public void onPermissionRequest(final PermissionRequest request) {
-                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                              mPermissionRequest = request; List<String> reqPerms = new ArrayList<>();
-                              for (String res : request.getResources()) {
-                                  if (res.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) reqPerms.add(Manifest.permission.RECORD_AUDIO);
-                                  else if (res.equals(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) reqPerms.add(Manifest.permission.CAMERA);
+                  // GOOGLE LOGIN / OAUTH REDIRECT TO CHROME BROWSER
+                  webView.webViewClient = object : WebViewClient() {
+                      override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                          if (url != null && (url.contains("accounts.google.com") || url.contains("oauth") || url.startsWith("intent://"))) {
+                              try {
+                                  val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                  startActivity(intent)
+                                  return true
+                              } catch (e: Exception) {
+                                  e.printStackTrace()
                               }
-                              if (!reqPerms.isEmpty()) {
-                                  boolean allGranted = true;
-                                  for (String p : reqPerms) { if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) { allGranted = false; break; } }
-                                  if (allGranted) request.grant(request.getResources());
-                                  else requestPermissions(reqPerms.toArray(new String[0]), 101);
-                              } else { request.grant(request.getResources()); }
-                          } else { request.grant(request.getResources()); }
+                          }
+                          return false
+                      }
+                  }
+
+                  // DIRECT DOWNLOAD MANAGER LISTENER
+                  webView.setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+                      try {
+                          val request = DownloadManager.Request(Uri.parse(url))
+                          request.allowScanningByMediaScanner()
+                          request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                          val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
+                          request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                          val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                          dm.enqueue(request)
+                          Toast.makeText(applicationContext, "Downloading: \$fileName", Toast.LENGTH_SHORT).show()
+                      } catch (e: Exception) {
+                          Toast.makeText(applicationContext, "Download failed: \${e.message}", Toast.LENGTH_LONG).show()
+                      }
+                  })
+
+                  webView.setWebChromeClient(object : WebChromeClient() {
+                      override fun onPermissionRequest(request: PermissionRequest) {
+                          request.grant(request.resources)
                       }
                       
-                      @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                              if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) { mGeoCallback = callback; mGeoOrigin = origin; requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 102); } 
-                              else { callback.invoke(origin, true, false); }
-                          } else { callback.invoke(origin, true, false); }
+                      override fun onShowFileChooser(webView: WebView, filePathCallback: ValueCallback<Array<Uri>>, fileChooserParams: FileChooserParams): Boolean {
+                          if (mFilePathCallback != null) {
+                              mFilePathCallback?.onReceiveValue(null)
+                          }
+                          mFilePathCallback = filePathCallback
+                          val intent = fileChooserParams.createIntent()
+                          try {
+                              startActivityForResult(intent, FILECHOOSER_RESULTCODE)
+                          } catch (e: Exception) {
+                              mFilePathCallback = null
+                              return false
+                          }
+                          return true
                       }
-                      
-                      @Override
-                      public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                          if (mFilePathCallback != null) { mFilePathCallback.onReceiveValue(null); }
-                          mFilePathCallback = filePathCallback;
-                          Intent intent = fileChooserParams.createIntent();
-                          try { startActivityForResult(intent, FILECHOOSER_RESULTCODE); } 
-                          catch (Exception e) { mFilePathCallback = null; return false; }
-                          return true;
-                      }
-                  });
+                  })
                   
-                  ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                  NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-                  if (activeNetwork != null && activeNetwork.isConnectedOrConnecting()) {
-                      webView.loadUrl("${{ github.event.client_payload.appUrl }}");
-                  } else {
-                      webView.loadUrl("file:///android_asset/no_internet.html");
-                  }
+                  webView.loadUrl("${{ github.event.client_payload.appUrl }}")
               }
               
-              @Override
-              protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
-                  if(requestCode == FILECHOOSER_RESULTCODE) {
-                      if (null == mFilePathCallback) return;
-                      Uri[] result = WebChromeClient.FileChooserParams.parseResult(resultCode, intent);
-                      mFilePathCallback.onReceiveValue(result);
-                      mFilePathCallback = null;
+              override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
+                  if (requestCode == FILECHOOSER_RESULTCODE) {
+                      if (mFilePathCallback == null) return
+                      val result = WebChromeClient.FileChooserParams.parseResult(resultCode, intent)
+                      mFilePathCallback?.onReceiveValue(result)
+                      mFilePathCallback = null
                   }
-                  super.onActivityResult(requestCode, resultCode, intent);
-              }
-              
-              @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-                  if (requestCode == 101 && mPermissionRequest != null) {
-                      boolean allGranted = true;
-                      for (int res : grantResults) { if (res != PackageManager.PERMISSION_GRANTED) { allGranted = false; break; } }
-                      if (allGranted) mPermissionRequest.grant(mPermissionRequest.getResources());
-                      mPermissionRequest = null;
-                  } else if (requestCode == 102 && mGeoCallback != null) {
-                      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) mGeoCallback.invoke(mGeoOrigin, true, false);
-                      else mGeoCallback.invoke(mGeoOrigin, false, false);
-                      mGeoCallback = null;
-                  }
+                  super.onActivityResult(requestCode, resultCode, intent)
               }
           }
           EOF
@@ -399,4 +363,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "AdMob Crash Fix & File Access Enabled."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Chrome OAuth and Download Manager Enabled."
