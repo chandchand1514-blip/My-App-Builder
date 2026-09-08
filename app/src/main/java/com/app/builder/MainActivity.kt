@@ -15,8 +15,12 @@ class MainActivity : AppCompatActivity() {
         val webView = WebView(this)
         setContentView(webView)
 
-        webView.settings.javaScriptEnabled = true
-        webView.settings.domStorageEnabled = true
+        webView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            // Google block se bachne ke liye custom User Agent
+            userAgentString = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+        }
 
         // Download Listener
         webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, contentLength ->
@@ -34,7 +38,7 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(applicationContext, "Download shuru ho gaya hai...", Toast.LENGTH_SHORT).show()
         }
 
-        // Google Login, Intent & External Links Handler
+        // Google Login, Firebase & Intent Handler
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                 val url = request?.url.toString()
@@ -42,26 +46,38 @@ class MainActivity : AppCompatActivity() {
                 if (url == null) return false
 
                 try {
-                    // Google Auth aur Intents ke liye
+                    // Firebase aur Google Auth intent ko theek karna
                     if (url.startsWith("intent://")) {
+                        if (url.contains("accounts.google.com") || url.contains("firebaseapp.com")) {
+                            // "intent://" ko hata kar normal HTTPS banayein aur bahar kholiye
+                            val cleanUrl = url.replaceFirst("intent://", "https://")
+                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(cleanUrl))
+                            startActivity(browserIntent)
+                            return true
+                        }
+
                         val intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
                         val fallbackUrl = intent.getStringExtra("browser_fallback_url")
-                        if (fallbackUrl != null) {
-                            view?.loadUrl(fallbackUrl)
-                        } else {
+                        
+                        if (intent.resolveActivity(packageManager) != null) {
                             startActivity(intent)
+                        } else if (fallbackUrl != null) {
+                            view?.loadUrl(fallbackUrl)
                         }
                         return true
-                    } else if (url.contains("accounts.google.com") || url.startsWith("whatsapp://") || url.startsWith("mailto:")) {
+                    } 
+                    // Direct links ke liye
+                    else if (url.contains("accounts.google.com") || url.startsWith("whatsapp://") || url.startsWith("mailto:")) {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         startActivity(intent)
                         return true
                     }
                 } catch (e: Exception) {
-                    return true // Error aane par page load hone se rokega
+                    e.printStackTrace()
+                    return true
                 }
                 
-                return false // Normal links ko app ke andar hi open karega
+                return false
             }
         }
 
