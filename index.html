@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DesiStore - Web to APK Builder</title>
+    <title>Professional App Builder</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -24,7 +24,7 @@
         }
         h2 { text-align: center; color: #333; margin-bottom: 20px; }
         label { font-weight: bold; display: block; color: #555; margin-bottom: 5px; }
-        input { 
+        input[type="text"], input[type="url"], input[type="file"] { 
             width: 100%; 
             padding: 12px; 
             margin-bottom: 20px; 
@@ -32,8 +32,6 @@
             border-radius: 6px; 
             box-sizing: border-box; 
         }
-        
-        /* Naya Checkbox Style */
         .checkbox-group {
             margin-bottom: 20px;
             background: #f9f9f9;
@@ -56,7 +54,6 @@
             margin: 0 10px 0 0;
             transform: scale(1.2);
         }
-
         button { 
             width: 100%; 
             padding: 14px; 
@@ -74,11 +71,11 @@
 <body>
 
     <div class="container">
-        <h2>Build Your APK</h2>
+        <h2>🚀 Professional App Builder</h2>
         <form action="/build" method="POST" enctype="multipart/form-data">
             
             <label>App Ka Naam</label>
-            <input type="text" name="appName" placeholder="Jaise: Raja Bandar App" required>
+            <input type="text" name="appName" placeholder="Jaise: DesiStore App" required>
 
             <label>Website Ka Link (URL)</label>
             <input type="url" name="appUrl" placeholder="https://aapki-website.com" required>
@@ -86,7 +83,7 @@
             <label>App Ka Logo</label>
             <input type="file" name="appLogo" accept="image/png, image/jpeg" required>
 
-            <!-- Naye ON/OFF Switches -->
+            <!-- Chrome Login & Download ON/OFF Switches -->
             <div class="checkbox-group">
                 <label>
                     <input type="checkbox" name="enableChromeLogin" value="true" checked>
@@ -97,3 +94,10 @@
                     App Download System ON
                 </label>
             </div>
+
+            <button type="submit">Build Master App</button>
+        </form>
+    </div>
+
+</body>
+</html>
