@@ -1,14 +1,26 @@
-// server.js ke andar
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
+
+// HTML form se aane wale data ko read karne ke liye zaroori lines
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+// Basic test route taaki Render error na de
+app.get('/', (req, res) => {
+    res.send("App Builder Server Live Hai!");
+});
+
+// Main Build API jahan form submit hota hai
 app.post('/build', (req, res) => {
-    // 1. HTML form se data receive karna
-    const appName = req.body.appName;
-    const appUrl = req.body.appUrl;
+    const appName = req.body.appName || "My App";
+    const appUrl = req.body.appUrl || "https://aapki-website.com";
     
-    // Agar checkbox checked hoga toh "true" aayega, warna checkbox ki value false ho jayegi
+    // Checkbox ON/OFF values
     const isChromeLoginEnabled = req.body.enableChromeLogin === 'true';
     const isDownloadEnabled = req.body.enableDownload === 'true';
 
-    // 2. Dynamic MainActivity.kt Code Banana (Backticks ` ` ke andar)
+    // Kotlin Android Code (Dynamic variables ke sath)
     const mainActivityCode = `
 package com.app.builder
 
@@ -123,16 +135,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Form se aaya website URL yahan set hoga
         webView.loadUrl("${appUrl}")
     }
 }
 `;
 
-    // 3. Ab is 'mainActivityCode' string ko aap apne GitHub API block mein 
-    // content update ke liye bhej sakte hain.
+    // YAHAN AAPKA GITHUB PUSH KAKNE WALA CODE AAYEGA 
+    // (Jo purane setup mein aap actions/API ko bhejte the)
     
-    // Yahan GitHub Actions ko trigger karne ka code aayega...
-    
-    res.send("GitHub par code successfully bhej diya gaya hai!");
+    res.send("App ka code set ho gaya hai! Build shuru ho chuka hai.");
+});
+
+// Render server ko start karne ke liye
+app.listen(port, () => {
+    console.log("Server port " + port + " par chal raha hai.");
 });
