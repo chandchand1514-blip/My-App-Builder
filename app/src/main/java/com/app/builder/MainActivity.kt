@@ -38,46 +38,50 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(applicationContext, "Download shuru ho gaya hai...", Toast.LENGTH_SHORT).show()
         }
 
-        // Google Login, Firebase & Intent Handler
+        // URL Interceptor (Google Login & Firebase)
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                 val url = request?.url.toString()
-                
                 if (url == null) return false
 
                 try {
-                    // Firebase aur Google Auth intent ko theek karna
-                    if (url.startsWith("intent://")) {
-                        if (url.contains("accounts.google.com") || url.contains("firebaseapp.com")) {
-                            // "intent://" ko hata kar normal HTTPS banayein aur bahar kholiye
-                            val cleanUrl = url.replaceFirst("intent://", "https://")
-                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(cleanUrl))
-                            startActivity(browserIntent)
-                            return true
+                    // 1. Google Auth ya Firebase ka koi bhi link ho (intent ya https) usko Chrome me bhejo
+                    if (url.contains("accounts.google.com") || url.contains("firebaseapp.com")) {
+                        var cleanUrl = url
+                        if (url.startsWith("intent://")) {
+                            // intent:// ko hta kar https:// laga do
+                            cleanUrl = url.replaceFirst("intent://", "https://")
                         }
-
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(cleanUrl))
+                        startActivity(intent)
+                        return true
+                    }
+                    
+                    // 2. Baaki normal intents (WhatsApp, UPI, aadi)
+                    if (url.startsWith("intent://") || url.startsWith("intent:")) {
                         val intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
                         val fallbackUrl = intent.getStringExtra("browser_fallback_url")
-                        
                         if (intent.resolveActivity(packageManager) != null) {
                             startActivity(intent)
                         } else if (fallbackUrl != null) {
                             view?.loadUrl(fallbackUrl)
                         }
                         return true
-                    } 
-                    // Direct links ke liye
-                    else if (url.contains("accounts.google.com") || url.startsWith("whatsapp://") || url.startsWith("mailto:")) {
+                    }
+                    
+                    // 3. Custom links (mailto:, whatsapp://)
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         startActivity(intent)
                         return true
                     }
+
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    return true
+                    return true 
                 }
                 
-                return false
+                return false // Normal links app me hi khulenge
             }
         }
 
