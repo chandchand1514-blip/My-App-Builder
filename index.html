@@ -32,6 +32,31 @@
             border-radius: 6px; 
             box-sizing: border-box; 
         }
+        
+        /* Naya Checkbox Style */
+        .checkbox-group {
+            margin-bottom: 20px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .checkbox-group label:last-child {
+            margin-bottom: 0;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0 10px 0 0;
+            transform: scale(1.2);
+        }
+
         button { 
             width: 100%; 
             padding: 14px; 
@@ -50,7 +75,6 @@
 
     <div class="container">
         <h2>Build Your APK</h2>
-        <!-- Form data seedha Node.js backend ko jayega -->
         <form action="/build" method="POST" enctype="multipart/form-data">
             
             <label>App Ka Naam</label>
@@ -61,6 +85,18 @@
 
             <label>App Ka Logo</label>
             <input type="file" name="appLogo" accept="image/png, image/jpeg" required>
+
+            <!-- Naye ON/OFF Switches -->
+            <div class="checkbox-group">
+                <label>
+                    <input type="checkbox" name="enableChromeLogin" value="true" checked>
+                    Google Login (Chrome Bypass) ON
+                </label>
+                <label>
+                    <input type="checkbox" name="enableDownload" value="true" checked>
+                    App Download System ON
+                </label>
+            </div>
 
             <button type="submit">Convert to APK</button>
         </form>
