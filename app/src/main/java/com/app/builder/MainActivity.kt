@@ -8,7 +8,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import android.content.Intent
 import android.net.Uri
-import java.net.URISyntaxException
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,7 +21,6 @@ class MainActivity : AppCompatActivity() {
             userAgentString = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
         }
 
-        // Download Listener
         webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
             val request = android.app.DownloadManager.Request(Uri.parse(url))
             request.setMimeType(mimetype)
@@ -36,39 +34,37 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(applicationContext, "Downloading...", Toast.LENGTH_SHORT).show()
         }
 
-        // Strict Intent Interceptor
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url.toString()
                 
-                if (url.startsWith("http://") || url.startsWith("https://")) {
-                    if (url.contains("accounts.google.com")) {
-                        view?.context?.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        return true
-                    }
-                    return false // Normal links open inside the app
+                // Google ya Firebase auth links ko direct Chrome me bhejna
+                if (url.contains("accounts.google.com") || url.contains("firebaseapp.com")) {
+                    val cleanUrl = if (url.startsWith("intent://")) url.replaceFirst("intent://", "https://") else url
+                    view?.context?.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(cleanUrl)))
+                    return true
                 }
 
-                // Forcefully handle intent:// without Android 11+ package visibility checks
-                try {
-                    val intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
-                    val fallbackUrl = intent.getStringExtra("browser_fallback_url")
-                    
+                // Kisi bhi unknown scheme (intent://, whatsapp://, mailto://) ko handle karna
+                if (!url.startsWith("http://") && !url.startsWith("https://")) {
                     try {
-                        view?.context?.startActivity(intent)
-                        return true
-                    } catch (e: Exception) {
-                        if (fallbackUrl != null) {
+                        val intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
+                        val fallbackUrl = intent.getStringExtra("browser_fallback_url")
+                        
+                        if (intent.resolveActivity(packageManager) != null) {
+                            startActivity(intent)
+                        } else if (fallbackUrl != null) {
                             view?.loadUrl(fallbackUrl)
-                            return true
+                        } else {
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                         }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
-                } catch (e: URISyntaxException) {
-                    e.printStackTrace()
+                    return true // Error page ko block karta hai
                 }
-                
-                // Return true forces WebView to stop, completely preventing the ERR_UNKNOWN_URL_SCHEME page
-                return true 
+
+                return false // Normal website links app me khulenge
             }
         }
 
