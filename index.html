@@ -17,10 +17,12 @@
         .toggle-container label { margin: 0 0 0 10px; font-weight: normal; }
         .btn { display: block; width: 100%; padding: 15px; background: #198754; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center; }
         .btn:disabled { background: #f39c12; cursor: wait; }
-        .app-list { margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        .app-list { margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 20px; max-height: 350px; overflow-y: auto; }
         .app-card { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee;}
         .app-info h4 { margin: 0 0 5px 0; }
         .app-info p { margin: 0; color: #666; font-size: 14px; }
+        .btn-install { background: #0d6efd; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px; }
+        .btn-install:hover { background: #0b5ed7; }
         .flex-row { display: flex; gap: 10px; }
         .flex-col { flex: 1; }
     </style>
@@ -30,8 +32,9 @@
 <div class="container">
     <h2>🚀 Professional App Builder</h2>
     
+    <!-- Yahan Direct App Download Hoga -->
     <div class="app-list">
-        <h3>🔄 Aapke Purane Apps</h3>
+        <h3>🔄 Aapke Banaye Hue Apps</h3>
         <div id="appList"><p style="text-align: center; color: #777;">Loading...</p></div>
     </div>
 
@@ -93,25 +96,38 @@
         }
     }
 
+    // Direct GitHub se sabhi APK download links laane ka system
     async function fetchApps() {
         try {
-            const response = await fetch('/api/apps');
-            const apps = await response.json();
+            const response = await fetch('https://api.github.com/repos/chandchand1514-blip/My-App-Builder/releases');
+            const releases = await response.json();
             const appList = document.getElementById('appList');
-            if (apps.length === 0) {
-                appList.innerHTML = '<p style="text-align: center; color: #777;">Koi purana app nahi mila.</p>';
+            
+            if (!releases || releases.length === 0) {
+                appList.innerHTML = '<p style="text-align: center; color: #777;">Koi app nahi mila.</p>';
                 return;
             }
-            appList.innerHTML = apps.map(app => `
-                <div class="app-card">
-                    <div class="app-info">
-                        <h4>📱 ${app.appName}</h4>
-                        <p>${app.packageName}</p>
+
+            appList.innerHTML = releases.map(release => {
+                const appName = release.name ? release.name.replace("App: ", "") : 'My App';
+                const apkAsset = release.assets && release.assets.find(a => a.name.endsWith('.apk'));
+                const downloadUrl = apkAsset ? apkAsset.browser_download_url : release.html_url;
+                const date = new Date(release.published_at).toLocaleDateString();
+
+                return `
+                    <div class="app-card">
+                        <div class="app-info">
+                            <h4>📱 ${appName}</h4>
+                            <p>Date: ${date}</p>
+                        </div>
+                        <div>
+                            <a href="${downloadUrl}" class="btn-install" target="_blank">⬇️ Install App</a>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         } catch (error) {
-            document.getElementById('appList').innerHTML = '<p style="text-align: center; color: #777;">Koi purana app nahi mila.</p>';
+            document.getElementById('appList').innerHTML = '<p style="text-align: center; color: #777;">App list load nahi ho payi.</p>';
         }
     }
 
@@ -119,7 +135,6 @@
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
         
-        // Button Waiting State
         btn.innerHTML = "⏳ App Ban Raha Hai... Wait (3:00)";
         btn.disabled = true;
 
@@ -142,7 +157,6 @@
                 body: JSON.stringify(formData)
             });
             
-            // 3 Minute (180 seconds) ka Live Timer
             let timeLeft = 180;
             const timer = setInterval(() => {
                 timeLeft--;
@@ -150,19 +164,20 @@
                 const seconds = timeLeft % 60;
                 btn.innerHTML = `⏳ App Ban Raha Hai... Wait (${minutes}:${seconds < 10 ? '0' : ''}${seconds})`;
 
-                // Timer Khatam Hone Par Download Button Banayein
                 if (timeLeft <= 0) {
                     clearInterval(timer);
-                    btn.innerHTML = "⬇️ Download Final APK";
+                    // Timer khatam hone par wapas button reset karein aur list update karein
+                    btn.innerHTML = "✅ App Ban Gaya! Upar List Mein Dekhein";
                     btn.style.backgroundColor = "#28a745";
-                    btn.disabled = false;
+                    fetchApps(); 
                     
-                    btn.onclick = (event) => {
-                        event.preventDefault();
-                        // Seedha GitHub ke Releases page par bhejega jahan APK hota hai
-                        window.open("https://github.com/chandchand1514-blip/My-App-Builder/releases", "_blank");
-                        setTimeout(() => location.reload(), 2000); // Page refresh
-                    };
+                    setTimeout(() => {
+                        btn.innerHTML = "🚀 Build Master App";
+                        btn.disabled = false;
+                        document.getElementById('buildForm').reset();
+                        document.getElementById('iconPreview').style.display = 'none';
+                        document.getElementById('splashPreview').style.display = 'none';
+                    }, 5000);
                 }
             }, 1000);
 
@@ -174,6 +189,7 @@
         }
     });
 
+    // Page khulte hi banaye gaye apps ki list show hogi
     window.onload = fetchApps;
 </script>
 </body>
