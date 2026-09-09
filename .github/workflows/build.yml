@@ -48,12 +48,6 @@ jobs:
           if [[ "$PKG" != *"."* ]] && [ -n "$PKG" ]; then PKG="com.${PKG}.app"; fi
           if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
           PKG_DIR=$(echo "$PKG" | tr '.' '/')
-          
-          ADMOB_APP_ID="${{ github.event.client_payload.config.admobAppId }}"
-          if [ ${#ADMOB_APP_ID} -lt 10 ]; then ADMOB_APP_ID="ca-app-pub-3940256099942544~3347511713"; fi
-          
-          ADMOB_BANNER_ID="${{ github.event.client_payload.config.admobBannerId }}"
-          if [ ${#ADMOB_BANNER_ID} -lt 10 ]; then ADMOB_BANNER_ID="ca-app-pub-3940256099942544/6300978111"; fi
 
           THEME_COLOR="${{ github.event.client_payload.config.themeColor }}"
           if [ -z "$THEME_COLOR" ] || [ "$THEME_COLOR" == "" ] || [ "$THEME_COLOR" == "null" ]; then THEME_COLOR="#000000"; fi
@@ -126,7 +120,6 @@ jobs:
               }
           }
           dependencies {
-              implementation 'com.google.android.gms:play-services-ads:22.6.0'
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'com.google.android.material:material:1.11.0'
           }
@@ -154,7 +147,6 @@ jobs:
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
               
               <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="@string/app_name" android:theme="@style/AppTheme" android:usesCleartextTraffic="true" android:hardwareAccelerated="true">
-                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${ADMOB_APP_ID}"/>
                   <activity android:name=".SplashActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -233,10 +225,6 @@ jobs:
           import android.webkit.WebViewClient
           import android.widget.LinearLayout
           import android.widget.Toast
-          import com.google.android.gms.ads.AdRequest
-          import com.google.android.gms.ads.AdSize
-          import com.google.android.gms.ads.AdView
-          import com.google.android.gms.ads.MobileAds
           
           class MainActivity : AppCompatActivity() {
               private var mFilePathCallback: ValueCallback<Array<Uri>>? = null
@@ -247,16 +235,6 @@ jobs:
                   try { window.statusBarColor = Color.parseColor("${THEME_COLOR}") } catch (e: Exception) {}
                   
                   setContentView(R.layout.activity_main)
-                  
-                  try {
-                      MobileAds.initialize(this) {}
-                      val mAdView = AdView(this)
-                      mAdView.setAdSize(AdSize.BANNER)
-                      mAdView.adUnitId = "${ADMOB_BANNER_ID}"
-                      val layout = findViewById<LinearLayout>(R.id.main_layout)
-                      layout.addView(mAdView)
-                      mAdView.loadAd(AdRequest.Builder().build())
-                  } catch (e: Exception) {}
                   
                   val webView = findViewById<WebView>(R.id.webview)
                   try { webView.setBackgroundColor(Color.parseColor("${BG_COLOR}")) } catch (e: Exception) {}
@@ -327,4 +305,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Final Bug-Free Version. UI and AdMob crash issues strictly bypassed."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "AdMob removed for 100% crash-free lightweight performance."
