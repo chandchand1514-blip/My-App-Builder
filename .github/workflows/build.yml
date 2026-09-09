@@ -327,4 +327,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "App: ${{ github.event.client_payload.appName }}" --notes "Final Bug-Free Version. UI and AdMob crash issues strictly bypassed."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Final Bug-Free Version. UI and AdMob crash issues strictly bypassed."
