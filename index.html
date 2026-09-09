@@ -1,3 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional App Builder</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2, h3 { text-align: center; color: #333; }
+        label { font-weight: bold; margin-top: 10px; display: block; }
+        input[type="text"], input[type="url"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        input[type="file"] { margin-top: 5px; }
+        input[type="color"] { width: 100%; height: 40px; border: none; margin-top: 5px; }
+        .preview-img { max-width: 100px; max-height: 100px; margin-top: 10px; display: none; border-radius: 10px; }
+        .toggle-container { display: flex; align-items: center; margin-top: 15px; }
+        .toggle-container label { margin: 0 0 0 10px; font-weight: normal; }
+        .btn { display: block; width: 100%; padding: 15px; background: #198754; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .app-list { margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        .app-card { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee;}
+        .app-info h4 { margin: 0 0 5px 0; }
+        .app-info p { margin: 0; color: #666; font-size: 14px; }
+        .flex-row { display: flex; gap: 10px; }
+        .flex-col { flex: 1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚀 Professional App Builder</h2>
+    
+    <div class="app-list">
+        <h3>🔄 Aapke Purane Apps</h3>
+        <div id="appList"><p style="text-align: center; color: #777;">Loading...</p></div>
+    </div>
+
+    <h3>📱 Build New / Edit App</h3>
+    <form id="buildForm">
+        <label>App Ka Naam:</label>
+        <input type="text" id="appName" placeholder="e.g. My Shop" required>
+
+        <label>Website Ka Link (URL):</label>
+        <input type="url" id="appUrl" placeholder="https://example.com" required>
+
+        <label>1. App Icon:</label>
+        <input type="file" accept="image/*" onchange="showPreview(event, 'iconPreview')">
+        <img id="iconPreview" class="preview-img" alt="Icon Preview">
+
+        <label>2. Splash Logo:</label>
+        <input type="file" accept="image/*" onchange="showPreview(event, 'splashPreview')">
+        <img id="splashPreview" class="preview-img" alt="Splash Preview">
+
+        <div class="flex-row">
+            <div class="flex-col">
+                <label>Theme Color (Top Bar)</label>
+                <input type="color" id="themeColor" value="#000000">
+            </div>
+            <div class="flex-col">
+                <label>Splash Color</label>
+                <input type="color" id="splashColor" value="#ffffff">
+            </div>
+        </div>
+
+        <label>Package Name (Zaroori Hai):</label>
+        <input type="text" id="packageName" placeholder="com.my.app" required>
+
+        <div class="toggle-container">
+            <input type="checkbox" id="googleLoginToggle" checked>
+            <label>Google Login (Chrome Bypass) ON</label>
+        </div>
+        
+        <div class="toggle-container">
+            <input type="checkbox" id="downloadToggle" checked>
+            <label>App Download System ON</label>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn">🚀 Build Master App</button>
+    </form>
+</div>
+
 <script>
     function showPreview(event, previewId) {
         const file = event.target.files[0];
@@ -27,28 +108,17 @@
                         <h4>📱 ${app.appName}</h4>
                         <p>${app.packageName}</p>
                     </div>
-                    <div class="action-buttons">
-                        <a href="${app.downloadUrl || '#'}" class="btn-install" target="_blank">⬇️ Install App</a>
-                        <button class="btn-delete" onclick="deleteApp('${app._id}')">🗑️ Delete</button>
-                    </div>
                 </div>
             `).join('');
-        } catch (error) {}
-    }
-
-    async function deleteApp(appId) {
-        if(confirm("Kya aap sach mein is app history ko delete karna chahte hain?")) {
-            await fetch(`/api/apps/${appId}`, { method: 'DELETE' });
-            fetchApps(); 
+        } catch (error) {
+            document.getElementById('appList').innerHTML = '<p style="text-align: center; color: #777;">Koi purana app nahi mila.</p>';
         }
     }
 
-    // NAYA WAIT AUR STATUS SYSTEM
     document.getElementById('buildForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
         
-        // 1. Button ko "Wait" mode mein daalein
         btn.innerHTML = "⏳ App Ban Raha Hai (3-5 Min Wait Karein)...";
         btn.style.backgroundColor = "#f39c12"; 
         btn.disabled = true;
@@ -61,8 +131,8 @@
             splashColor: document.getElementById('splashColor').value,
             googleLoginEnabled: document.getElementById('googleLoginToggle').checked,
             downloadSystemEnabled: document.getElementById('downloadToggle').checked,
-            appIconUrl: document.getElementById('iconPreview').src || "https://via.placeholder.com/512",
-            splashLogoUrl: document.getElementById('splashPreview').src || "https://via.placeholder.com/512"
+            appIconUrl: document.getElementById('iconPreview').src || "",
+            splashLogoUrl: document.getElementById('splashPreview').src || ""
         };
 
         try {
@@ -72,25 +142,23 @@
                 body: JSON.stringify(formData)
             });
             
-            // 2. Build trigger hone ke baad Status Check button banayein
             btn.innerHTML = "👀 Live Status Dekhein (Pass / Failed)";
-            btn.style.backgroundColor = "#3498db"; 
+            btn.style.backgroundColor = "#0d6efd"; 
             btn.disabled = false;
             
-            // Is button par click karte hi GitHub ka status page khulega
             btn.onclick = (event) => {
                 event.preventDefault();
                 window.open("https://github.com/chandchand1514-blip/My-App-Builder/actions", "_blank");
             };
-
-            setTimeout(fetchApps, 3000); 
         } catch (error) {
             alert("❌ Server Error: Build fail ho gaya.");
             btn.innerText = "🚀 Build Master App";
-            btn.style.backgroundColor = "#28a745";
+            btn.style.backgroundColor = "#198754";
             btn.disabled = false;
         }
     });
 
     window.onload = fetchApps;
 </script>
+</body>
+</html>
