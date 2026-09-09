@@ -16,7 +16,7 @@
         .toggle-container { display: flex; align-items: center; margin-top: 15px; }
         .toggle-container label { margin: 0 0 0 10px; font-weight: normal; }
         .btn { display: block; width: 100%; padding: 15px; background: #198754; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center; }
-        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .btn:disabled { background: #f39c12; cursor: wait; }
         .app-list { margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
         .app-card { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee;}
         .app-info h4 { margin: 0 0 5px 0; }
@@ -119,8 +119,8 @@
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
         
-        btn.innerHTML = "⏳ App Ban Raha Hai (3-5 Min Wait Karein)...";
-        btn.style.backgroundColor = "#f39c12"; 
+        // Button Waiting State
+        btn.innerHTML = "⏳ App Ban Raha Hai... Wait (3:00)";
         btn.disabled = true;
 
         const formData = {
@@ -142,16 +142,32 @@
                 body: JSON.stringify(formData)
             });
             
-            btn.innerHTML = "👀 Live Status Dekhein (Pass / Failed)";
-            btn.style.backgroundColor = "#0d6efd"; 
-            btn.disabled = false;
-            
-            btn.onclick = (event) => {
-                event.preventDefault();
-                window.open("https://github.com/chandchand1514-blip/My-App-Builder/actions", "_blank");
-            };
+            // 3 Minute (180 seconds) ka Live Timer
+            let timeLeft = 180;
+            const timer = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                btn.innerHTML = `⏳ App Ban Raha Hai... Wait (${minutes}:${seconds < 10 ? '0' : ''}${seconds})`;
+
+                // Timer Khatam Hone Par Download Button Banayein
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    btn.innerHTML = "⬇️ Download Final APK";
+                    btn.style.backgroundColor = "#28a745";
+                    btn.disabled = false;
+                    
+                    btn.onclick = (event) => {
+                        event.preventDefault();
+                        // Seedha GitHub ke Releases page par bhejega jahan APK hota hai
+                        window.open("https://github.com/chandchand1514-blip/My-App-Builder/releases", "_blank");
+                        setTimeout(() => location.reload(), 2000); // Page refresh
+                    };
+                }
+            }, 1000);
+
         } catch (error) {
-            alert("❌ Server Error: Build fail ho gaya.");
+            alert("❌ Server Error: Build trigger nahi hua.");
             btn.innerText = "🚀 Build Master App";
             btn.style.backgroundColor = "#198754";
             btn.disabled = false;
