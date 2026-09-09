@@ -108,8 +108,8 @@ jobs:
                   applicationId "$PKG"
                   minSdk 24
                   targetSdk 34
-                  versionCode 2
-                  versionName "1.1"
+                  versionCode ${{ github.run_number }}
+                  versionName "1.${{ github.run_number }}"
               }
               buildTypes {
                   release { signingConfig signingConfigs.release; minifyEnabled false }
@@ -305,4 +305,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "AdMob removed for 100% crash-free lightweight performance."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. AdMob removed for 100% crash-free lightweight performance."
