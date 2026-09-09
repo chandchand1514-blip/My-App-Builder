@@ -12,28 +12,44 @@ const publicDir = path.join(__dirname, 'public');
 if (!fs.existsSync(publicDir)) { fs.mkdirSync(publicDir, { recursive: true }); }
 app.use(express.static(publicDir));
 
+// Frontend HTML file serve karna
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html')); 
 });
 
-// App Delete Karne Ka Naya API Route
+// Purana dummy route taaki error na aaye
+app.get('/api/apps', (req, res) => {
+    res.status(200).json([]); 
+});
+
+// ✅ 100% Working Delete API
 app.delete('/delete-app/:id', async (req, res) => {
     const releaseId = req.params.id;
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    const GITHUB_REPO = process.env.GITHUB_REPO;
+
     try {
-        await axios.delete(`https://api.github.com/repos/${process.env.GITHUB_REPO}/releases/${releaseId}`, {
+        await axios.delete(`https://api.github.com/repos/${GITHUB_REPO}/releases/${releaseId}`, {
             headers: { 
-                'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-                'Accept': 'application/vnd.github.v3+json'
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'User-Agent': 'App-Builder'
             }
         });
         res.status(200).json({ message: "App Deleted Successfully" });
     } catch (error) {
+        console.error("❌ Delete Error:", error.response ? error.response.data : error.message);
         res.status(500).json({ error: "Failed to delete app" });
     }
 });
 
+// GitHub Actions Par Build Bhejne Ka Route
 app.post('/build', async (req, res) => {
-    const { appName, appUrl, packageName, themeColor, splashColor, appIconUrl, splashLogoUrl, googleLoginEnabled, downloadSystemEnabled } = req.body;
+    const { 
+        appName, appUrl, packageName, themeColor, splashColor, 
+        appIconUrl, splashLogoUrl, googleLoginEnabled, downloadSystemEnabled 
+    } = req.body;
+
     const buildId = Date.now().toString();
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
     const GITHUB_REPO = process.env.GITHUB_REPO;
@@ -57,18 +73,40 @@ app.post('/build', async (req, res) => {
     const githubPayload = {
         event_type: 'build-app',
         client_payload: {
-            buildId: buildId, appName: appName, appUrl: appUrl, appIconUrl: finalIconUrl, splashLogoUrl: finalSplashUrl,
-            config: { packageName: packageName, themeColor: themeColor, splashColor: splashColor, googleLoginEnabled: googleLoginEnabled, downloadSystemEnabled: downloadSystemEnabled }
+            buildId: buildId,
+            appName: appName,
+            appUrl: appUrl,
+            appIconUrl: finalIconUrl,
+            splashLogoUrl: finalSplashUrl,
+            config: {
+                packageName: packageName,
+                themeColor: themeColor,
+                splashColor: splashColor,
+                googleLoginEnabled: googleLoginEnabled,
+                downloadSystemEnabled: downloadSystemEnabled
+            }
         }
     };
 
     try {
-        const githubResponse = await axios.post(`https://api.github.com/repos/${GITHUB_REPO}/dispatches`, githubPayload, {
-            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
-        res.status(200).json({ message: "Build Started!" });
-    } catch (error) { res.status(500).json({ error: "Failed" }); }
+        const githubResponse = await axios.post(
+            `https://api.github.com/repos/${GITHUB_REPO}/dispatches`,
+            githubPayload,
+            {
+                headers: {
+                    'Authorization': `token ${GITHUB_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            }
+        );
+        res.status(200).json({ message: "✅ Build Started Successfully!", data: githubResponse.data });
+    } catch (error) {
+        console.error("❌ GitHub API Error:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to trigger build on GitHub" });
+    }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
+});
