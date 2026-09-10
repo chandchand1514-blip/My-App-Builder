@@ -153,7 +153,14 @@ jobs:
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                   </activity>
-                  <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize" />
+                  <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize" android:launchMode="singleTask">
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="myappauth" android:host="callback" />
+                      </intent-filter>
+                  </activity>
               </application>
           </manifest>
           EOF
@@ -221,6 +228,7 @@ jobs:
           import android.net.Uri;
           import android.os.Bundle;
           import android.os.Environment;
+          import android.webkit.CookieManager;
           import android.webkit.DownloadListener;
           import android.webkit.URLUtil;
           import android.webkit.ValueCallback;
@@ -234,6 +242,7 @@ jobs:
           public class MainActivity extends AppCompatActivity {
               private ValueCallback<Uri[]> mFilePathCallback;
               private final int FILECHOOSER_RESULTCODE = 103;
+              private WebView webView;
               
               @Override
               protected void onCreate(Bundle savedInstanceState) {
@@ -242,25 +251,25 @@ jobs:
                       try { getWindow().setStatusBarColor(Color.parseColor("YYYYY")); } catch (Exception e) {}
                       setContentView(R.layout.activity_main);
                       
-                      WebView webView = findViewById(R.id.webview);
+                      webView = findViewById(R.id.webview);
                       try { webView.setBackgroundColor(Color.parseColor("ZZZZZ")); } catch (Exception e) {}
                       
                       WebSettings ws = webView.getSettings();
                       ws.setJavaScriptEnabled(true);
                       ws.setDomStorageEnabled(true);
+                      ws.setDatabaseEnabled(true);
                       ws.setAllowFileAccess(true);
                       ws.setAllowContentAccess(true);
                       ws.setLoadWithOverviewMode(true);
                       ws.setUseWideViewPort(true);
                       
-                      // ✅ GOOGLE LOGIN BYPASS: App ko lagta hai yeh asli browser hai
-                      String userAgent = ws.getUserAgentString();
-                      ws.setUserAgentString(userAgent.replace("; wv", ""));
+                      CookieManager cookieManager = CookieManager.getInstance();
+                      cookieManager.setAcceptCookie(true);
+                      cookieManager.setAcceptThirdPartyCookies(webView, true);
                       
                       webView.setWebViewClient(new WebViewClient() {
                           @Override
                           public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                              // Google Login ki links ab Chrome me nahi jayengi, app me hi khulengi
                               if (url != null && (url.startsWith("intent://") || url.startsWith("whatsapp://") || url.startsWith("upi://") || url.startsWith("tel:") || url.startsWith("mailto:"))) {
                                   try {
                                       startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
@@ -303,9 +312,34 @@ jobs:
                           }
                       });
                       
-                      try { webView.loadUrl("WWWWW"); } catch (Exception e) {}
+                      handleIntent(getIntent());
+                      
                   } catch (Exception e) {
                       Toast.makeText(this, "Loading...", Toast.LENGTH_SHORT).show();
+                  }
+              }
+
+              @Override
+              protected void onNewIntent(Intent intent) {
+                  super.onNewIntent(intent);
+                  setIntent(intent);
+                  handleIntent(intent);
+              }
+
+              private void handleIntent(Intent intent) {
+                  if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+                      Uri data = intent.getData();
+                      if (data != null && "myappauth".equals(data.getScheme()) && "callback".equals(data.getHost())) {
+                          String token = data.getQueryParameter("token");
+                          if (token != null && !token.isEmpty()) {
+                              webView.evaluateJavascript("localStorage.setItem('auth_token', '" + token + "');", null);
+                              webView.loadUrl("WWWWW?token=" + token);
+                              return;
+                          }
+                      }
+                  }
+                  if (webView.getUrl() == null || webView.getUrl().isEmpty()) {
+                      try { webView.loadUrl("WWWWW"); } catch (Exception e) {}
                   }
               }
               
@@ -335,4 +369,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. Native Android Java Build. In-App Google Login Fix Applied."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. Native Android Java Build with Deep Linking enabled."
