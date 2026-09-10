@@ -122,6 +122,7 @@ jobs:
           dependencies {
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'com.google.android.material:material:1.11.0'
+              implementation 'androidx.browser:browser:1.7.0'
           }
           EOF
           
@@ -221,6 +222,7 @@ jobs:
           cat << 'EOF' > "app/src/main/java/$PKG_DIR/MainActivity.java"
           package XXXXX;
           import androidx.appcompat.app.AppCompatActivity;
+          import androidx.browser.customtabs.CustomTabsIntent;
           import android.app.DownloadManager;
           import android.content.Context;
           import android.content.Intent;
@@ -270,6 +272,13 @@ jobs:
                       webView.setWebViewClient(new WebViewClient() {
                           @Override
                           public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                              if (url != null && (url.contains("accounts.google.com") || url.contains("oauth") || url.contains("signin"))) {
+                                  try {
+                                      CustomTabsIntent customTabsIntent = new CustomTabsIntent.Builder().build();
+                                      customTabsIntent.launchUrl(MainActivity.this, Uri.parse(url));
+                                      return true;
+                                  } catch (Exception e) { return false; }
+                              }
                               if (url != null && (url.startsWith("intent://") || url.startsWith("whatsapp://") || url.startsWith("upi://") || url.startsWith("tel:") || url.startsWith("mailto:"))) {
                                   try {
                                       startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
@@ -369,4 +378,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. Native Android Java Build with Deep Linking enabled."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. Custom Tabs & Deep Linking Integration."
