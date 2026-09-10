@@ -5,42 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Professional App Builder</title>
     <style>
-        :root { --bg: #f4f7f6; --card-bg: #ffffff; --text: #333333; --border: #eeeeee; --input-bg: #ffffff; }
-        body.dark-mode { --bg: #121212; --card-bg: #1e1e1e; --text: #f1f1f1; --border: #333333; --input-bg: #2a2a2a; }
-        body { font-family: Arial, sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; transition: 0.3s; }
-        .container { max-width: 600px; margin: auto; background: var(--card-bg); padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 1px solid var(--border); transition: 0.3s; }
-        h2, h3 { text-align: center; color: var(--text); }
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2, h3 { text-align: center; color: #333; }
         label { font-weight: bold; margin-top: 10px; display: block; }
-        input[type="text"], input[type="url"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid var(--border); border-radius: 5px; box-sizing: border-box; background: var(--input-bg); color: var(--text); }
-        input[type="color"] { width: 100%; height: 40px; border: none; margin-top: 5px; background: transparent; }
+        input[type="text"], input[type="url"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        input[type="file"] { margin-top: 5px; }
+        input[type="color"] { width: 100%; height: 40px; border: none; margin-top: 5px; }
         .preview-img { max-width: 100px; max-height: 100px; margin-top: 10px; display: none; border-radius: 10px; }
         .toggle-container { display: flex; align-items: center; margin-top: 15px; }
         .toggle-container label { margin: 0 0 0 10px; font-weight: normal; }
-        .btn { display: block; width: 100%; padding: 15px; background: #198754; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center; transition: 0.3s; }
+        .btn { display: block; width: 100%; padding: 15px; background: #198754; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center; }
         .btn:disabled { background: #f39c12; cursor: wait; }
-        .app-list { margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 20px; max-height: 400px; overflow-y: auto; }
-        .app-card { background: var(--bg); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); }
+        .app-list { margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 20px; max-height: 400px; overflow-y: auto; }
+        .app-card { padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: 0.3s;}
         .app-info h4 { margin: 0 0 5px 0; }
-        .app-info p { margin: 0; color: #888; font-size: 13px; }
-        .btn-install { background: #0d6efd; color: white; padding: 8px 12px; border:none; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 13px; display: block; text-align: center; margin-bottom: 5px; cursor:pointer;}
-        .btn-delete { background: #dc3545; color: white; padding: 8px 12px; border:none; border-radius: 5px; font-weight: bold; font-size: 13px; cursor: pointer; width: 100%;}
+        .app-info p { margin: 0; color: #666; font-size: 13px; }
+        .btn-install { background: #0d6efd; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 13px; display: block; text-align: center; margin-bottom: 5px;}
+        .btn-delete { background: #dc3545; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 13px; border: none; cursor: pointer; width: 100%;}
+        .btn-install:hover { background: #0b5ed7; }
+        .btn-delete:hover { background: #bb2d3b; }
         .flex-row { display: flex; gap: 10px; }
         .flex-col { flex: 1; }
-        #themeToggle { padding: 5px 15px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>🚀 App Builder</h2>
-        <!-- DAY / NIGHT BUTTON -->
-        <button id="themeToggle" onclick="toggleTheme()">🌙 Night</button>
-    </div>
+    <h2>🚀 Professional App Builder</h2>
     
     <div class="app-list">
         <h3>🔄 Aapke Banaye Hue Apps</h3>
-        <div id="appList"><p style="text-align: center;">Loading...</p></div>
+        <div id="appList"><p style="text-align: center; color: #777;">Loading...</p></div>
     </div>
 
     <h3>📱 Build New / Edit App</h3>
@@ -63,31 +58,11 @@
         <input type="text" id="packageName" placeholder="com.my.app" required>
         <div class="toggle-container"><input type="checkbox" id="googleLoginToggle" checked><label>Google Login (Chrome Bypass) ON</label></div>
         <div class="toggle-container"><input type="checkbox" id="downloadToggle" checked><label>App Download System ON</label></div>
-        
-        <!-- YAHI BUTTON DOWNLOAD MEIN BADLEGA -->
         <button type="submit" id="submitBtn" class="btn">🚀 Build Master App</button>
     </form>
 </div>
 
 <script>
-    // Day/Night Logic
-    function toggleTheme() {
-        document.body.classList.toggle('dark-mode');
-        const btn = document.getElementById('themeToggle');
-        if(document.body.classList.contains('dark-mode')) {
-            btn.innerText = "☀️ Day";
-            localStorage.setItem('theme', 'dark');
-        } else {
-            btn.innerText = "🌙 Night";
-            localStorage.setItem('theme', 'light');
-        }
-    }
-    
-    if(localStorage.getItem('theme') === 'dark') {
-        document.body.classList.add('dark-mode');
-        document.getElementById('themeToggle').innerText = "☀️ Day";
-    }
-
     function showPreview(event, previewId) {
         const file = event.target.files[0];
         if (file) {
@@ -108,21 +83,23 @@
             const appList = document.getElementById('appList');
             
             if (!releases || releases.length === 0) {
-                appList.innerHTML = '<p style="text-align: center;">Koi app nahi mila.</p>';
+                appList.innerHTML = '<p style="text-align: center; color: #777;">Koi app nahi mila.</p>';
                 return 0;
             }
 
-            // List mein bhi directly naye tab mein download hoga
-            appList.innerHTML = releases.map(release => {
+            appList.innerHTML = releases.map((release, index) => {
                 const titleParts = release.name ? release.name.split(" | ") : ["My App", "com.my.app"];
                 const appName = titleParts[0];
                 const pkgName = titleParts[1] || "com.universal.app";
                 const apkAsset = release.assets && release.assets.find(a => a.name.endsWith('.apk'));
                 const downloadUrl = apkAsset ? apkAsset.browser_download_url : release.html_url;
                 const date = new Date(release.published_at).toLocaleDateString();
+                
+                // Naye app ko highlight karne ka code
+                const isNewStyle = index === 0 ? 'border: 2px solid #28a745; background: #e8f8ec;' : 'border: 1px solid #eee; background: #f9f9f9;';
 
                 return `
-                    <div class="app-card" id="app-${release.id}">
+                    <div class="app-card" id="app-${release.id}" style="${isNewStyle}">
                         <div class="app-info">
                             <h4>📱 ${appName}</h4>
                             <p>📦 ${pkgName}</p>
@@ -137,7 +114,7 @@
             }).join('');
             return releases.length; 
         } catch (error) {
-            document.getElementById('appList').innerHTML = '<p style="text-align: center;">App list load nahi ho payi.</p>';
+            document.getElementById('appList').innerHTML = '<p style="text-align: center; color: #777;">App list load nahi ho payi.</p>';
             return 0;
         }
     }
@@ -150,9 +127,18 @@
             
             try {
                 const response = await fetch(`/delete-app/${releaseId}`, { method: 'DELETE' });
-                if(response.ok) { fetchApps(); } 
-                else { alert("Delete fail ho gaya."); appCard.style.opacity = "1"; appCard.style.pointerEvents = "auto"; }
-            } catch (error) { alert("Delete fail ho gaya."); appCard.style.opacity = "1"; appCard.style.pointerEvents = "auto"; }
+                if(response.ok) {
+                    fetchApps(); 
+                } else {
+                    alert("Delete fail ho gaya.");
+                    appCard.style.opacity = "1";
+                    appCard.style.pointerEvents = "auto";
+                }
+            } catch (error) { 
+                alert("Delete fail ho gaya."); 
+                appCard.style.opacity = "1";
+                appCard.style.pointerEvents = "auto";
+            }
         }
     }
 
@@ -186,30 +172,16 @@
                 const seconds = elapsedSeconds % 60;
                 btn.innerHTML = `⏳ App Ban Raha Hai... (${minutes}:${seconds < 10 ? '0' : ''}${seconds})`;
 
-                if (elapsedSeconds % 10 === 0) {
+                if (elapsedSeconds % 8 === 0) {
                     try {
                         const checkResponse = await fetch('/api/releases?t=' + new Date().getTime());
                         if (checkResponse.ok) {
                             const currentReleases = await checkResponse.json();
                             if (currentReleases.length > initialAppCount) {
                                 clearInterval(timer);
-                                
-                                // YAHAN BUTTON DIRECT DOWNLOAD MEIN BADLEGA
-                                const newRelease = currentReleases[0];
-                                const apkAsset = newRelease.assets && newRelease.assets.find(a => a.name.endsWith('.apk'));
-                                const downloadUrl = apkAsset ? apkAsset.browser_download_url : newRelease.html_url;
-
-                                btn.innerHTML = "⬇️ Naya App Download Karein";
-                                btn.style.backgroundColor = "#0d6efd";
-                                btn.disabled = false;
-                                btn.type = "button"; // form submit hone se rokne ke liye
-                                
-                                btn.onclick = () => {
-                                    window.open(downloadUrl, '_blank');
-                                    // 2 second baad wapas form normal ho jayega naya app banane ke liye
-                                    setTimeout(() => { location.reload(); }, 2000);
-                                };
-                                
+                                // ✅ Form reset system poori tarah hata diya gaya
+                                btn.innerHTML = "✅ App Ban Gaya! Upar List Mein Check Karein ⬆️";
+                                btn.style.backgroundColor = "#28a745";
                                 fetchApps(); 
                             }
                         }
@@ -218,7 +190,7 @@
                 
                 if (elapsedSeconds > 300) {
                     clearInterval(timer);
-                    btn.innerHTML = "⚠️ Thoda time lag raha hai, Page Refresh Karein";
+                    btn.innerHTML = "⚠️ App Ban Gaya Hoga, Ek Baar Page Refresh Karein";
                     btn.style.backgroundColor = "#f39c12";
                     btn.disabled = false;
                 }
