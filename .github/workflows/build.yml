@@ -129,8 +129,9 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                  <item name="android:windowBackground">${SPLASH_COLOR}</item>
-                  <item name="android:statusBarColor">${THEME_COLOR}</item>
+                  <!-- Hardcoded Safe Colors to Prevent Crashes -->
+                  <item name="android:windowBackground">#FFFFFF</item>
+                  <item name="android:statusBarColor">#000000</item>
               </style>
           </resources>
           EOF
@@ -165,8 +166,9 @@ jobs:
           cat << EOF > app/src/main/res/layout/activity_splash.xml
           <?xml version="1.0" encoding="utf-8"?>
           <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/splash_layout"
               android:layout_width="match_parent" android:layout_height="match_parent" 
-              android:background="${SPLASH_COLOR}">
+              android:background="#FFFFFF">
               <ImageView android:layout_width="250dp" android:layout_height="250dp" 
                   android:layout_centerInParent="true" android:src="@drawable/splash_logo" />
           </RelativeLayout>
@@ -176,7 +178,7 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:id="@+id/main_layout"
-              android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="${BG_COLOR}">
+              android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="#FFFFFF">
               <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
           </LinearLayout>
           EOF
@@ -189,15 +191,20 @@ jobs:
           import android.os.Handler
           import android.os.Looper
           import android.graphics.Color
+          import android.widget.RelativeLayout
           
           class SplashActivity : AppCompatActivity() {
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
-                  try { window.statusBarColor = Color.parseColor("${SPLASH_COLOR}") } catch (e: Exception) {}
                   setContentView(R.layout.activity_splash)
+                  
+                  // Safe Color Application
+                  try { window.statusBarColor = Color.parseColor("${SPLASH_COLOR}") } catch (e: Exception) {}
+                  try { findViewById<RelativeLayout>(R.id.splash_layout).setBackgroundColor(Color.parseColor("${SPLASH_COLOR}")) } catch (e: Exception) {}
+                  
                   Handler(Looper.getMainLooper()).postDelayed({
                       try {
-                          startActivity(Intent(this, MainActivity::class.java))
+                          startActivity(Intent(this@SplashActivity, MainActivity::class.java))
                       } catch (e: Exception) {}
                       finish()
                   }, 2500)
@@ -232,9 +239,11 @@ jobs:
               
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
-                  try { window.statusBarColor = Color.parseColor("${THEME_COLOR}") } catch (e: Exception) {}
-                  
                   setContentView(R.layout.activity_main)
+                  
+                  // Safe Color Application
+                  try { window.statusBarColor = Color.parseColor("${THEME_COLOR}") } catch (e: Exception) {}
+                  try { findViewById<LinearLayout>(R.id.main_layout).setBackgroundColor(Color.parseColor("${BG_COLOR}")) } catch (e: Exception) {}
                   
                   val webView = findViewById<WebView>(R.id.webview)
                   try { webView.setBackgroundColor(Color.parseColor("${BG_COLOR}")) } catch (e: Exception) {}
@@ -305,4 +314,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. AdMob removed for 100% crash-free lightweight performance."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. Extreme Crash-proof Kotlin logic active."
