@@ -253,10 +253,15 @@ jobs:
                       ws.setLoadWithOverviewMode(true);
                       ws.setUseWideViewPort(true);
                       
+                      // ✅ GOOGLE LOGIN BYPASS: App ko lagta hai yeh asli browser hai
+                      String userAgent = ws.getUserAgentString();
+                      ws.setUserAgentString(userAgent.replace("; wv", ""));
+                      
                       webView.setWebViewClient(new WebViewClient() {
                           @Override
                           public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                              if (url != null && (url.contains("accounts.google.com") || url.contains("oauth") || url.startsWith("intent://"))) {
+                              // Google Login ki links ab Chrome me nahi jayengi, app me hi khulengi
+                              if (url != null && (url.startsWith("intent://") || url.startsWith("whatsapp://") || url.startsWith("upi://") || url.startsWith("tel:") || url.startsWith("mailto:"))) {
                                   try {
                                       startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
                                       return true;
@@ -330,4 +335,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. Native Android Java Build. 100% Crash-Free."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. Native Android Java Build. In-App Google Login Fix Applied."
