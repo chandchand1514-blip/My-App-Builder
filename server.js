@@ -16,14 +16,15 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html')); 
 });
 
-// ✅ Naya API - GitHub Rate Limit Block Fix
+// ✅ Cache-Buster API (Ab app list hamesha fresh aayegi)
 app.get('/api/releases', async (req, res) => {
     try {
-        const response = await axios.get(`https://api.github.com/repos/${process.env.GITHUB_REPO}/releases`, {
+        const response = await axios.get(`https://api.github.com/repos/${process.env.GITHUB_REPO}/releases?timestamp=${Date.now()}`, {
             headers: { 
                 'Authorization': `token ${process.env.GITHUB_TOKEN}`,
                 'Accept': 'application/vnd.github.v3+json',
-                'User-Agent': 'App-Builder'
+                'User-Agent': 'App-Builder',
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
             }
         });
         res.status(200).json(response.data);
