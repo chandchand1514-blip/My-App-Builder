@@ -62,12 +62,21 @@ jobs:
           
           cp master.keystore app/master.keystore
           
-          curl -L "${{ github.event.client_payload.appIconUrl }}" -o temp_icon.img
-          convert temp_icon.img -resize 512x512 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || true
-          cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png || true
+          # ANTI-CRASH SYSTEM: 1x1 Transparent PNG Fallback
+          echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" | base64 -d > safe_image.png
           
-          curl -L "${{ github.event.client_payload.splashLogoUrl }}" -o temp_splash.img
-          convert temp_splash.img -resize 512x512 app/src/main/res/drawable/splash_logo.png || true
+          # Icon Generation with Safety Check
+          curl -sL "${{ github.event.client_payload.appIconUrl }}" -o temp_icon.png
+          if ! convert temp_icon.png -resize 512x512 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; then
+              cp safe_image.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          fi
+          cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          
+          # Splash Generation with Safety Check
+          curl -sL "${{ github.event.client_payload.splashLogoUrl }}" -o temp_splash.png
+          if ! convert temp_splash.png -resize 512x512 app/src/main/res/drawable/splash_logo.png; then
+              cp safe_image.png app/src/main/res/drawable/splash_logo.png
+          fi
           
           cat << 'EOF' > gradle.properties
           android.useAndroidX=true
@@ -170,10 +179,20 @@ jobs:
           class SplashActivity : AppCompatActivity() {
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
-                  setContentView(R.layout.activity_splash)
-                  Handler(Looper.getMainLooper()).postDelayed({
-                      startActivity(Intent(this, MainActivity::class.java))
+                  try {
+                      setContentView(R.layout.activity_splash)
+                  } catch (e: Exception) {
+                      // Bypasses Splash Screen if Image is Corrupted!
+                      startActivity(Intent(this@SplashActivity, MainActivity::class.java))
                       finish()
+                      return
+                  }
+                  
+                  Handler(Looper.getMainLooper()).postDelayed({
+                      try {
+                          startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                          finish()
+                      } catch (e: Exception) {}
                   }, 2500)
               }
           }
@@ -195,41 +214,48 @@ jobs:
               private val FILECHOOSER_RESULTCODE = 103
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
-                  setContentView(R.layout.activity_main)
-                  val webView = findViewById<WebView>(R.id.webview)
-                  val ws = webView.settings
-                  ws.javaScriptEnabled = true
-                  ws.domStorageEnabled = true
-                  ws.allowFileAccess = true
-                  ws.allowContentAccess = true
-                  ws.loadWithOverviewMode = true
-                  ws.useWideViewPort = true
-                  webView.webViewClient = object : WebViewClient() {
-                      override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                          if (url != null && (url.contains("accounts.google.com") || url.contains("oauth") || url.startsWith("intent://"))) {
-                              try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))); return true } catch (e: Exception) {}
+                  try {
+                      setContentView(R.layout.activity_main)
+                      val webView = findViewById<WebView>(R.id.webview)
+                      val ws = webView.settings
+                      ws.javaScriptEnabled = true
+                      ws.domStorageEnabled = true
+                      ws.allowFileAccess = true
+                      ws.allowContentAccess = true
+                      ws.loadWithOverviewMode = true
+                      ws.useWideViewPort = true
+                      
+                      webView.webViewClient = object : WebViewClient() {
+                          override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                              if (url != null && (url.contains("accounts.google.com") || url.contains("oauth") || url.startsWith("intent://"))) {
+                                  try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))); return true } catch (e: Exception) {}
+                              }
+                              return false
                           }
-                          return false
                       }
-                  }
-                  webView.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
-                      try {
-                          val request = DownloadManager.Request(Uri.parse(url))
-                          request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                          request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(url, contentDisposition, mimeType))
-                          (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
-                          Toast.makeText(applicationContext, "Downloading...", Toast.LENGTH_SHORT).show()
-                      } catch (e: Exception) {}
-                  }
-                  webView.webChromeClient = object : WebChromeClient() {
-                      override fun onShowFileChooser(webView: WebView, filePathCallback: ValueCallback<Array<Uri>>, fileChooserParams: FileChooserParams): Boolean {
-                          mFilePathCallback?.onReceiveValue(null)
-                          mFilePathCallback = filePathCallback
-                          try { startActivityForResult(fileChooserParams.createIntent(), FILECHOOSER_RESULTCODE) } catch (e: Exception) { return false }
-                          return true
+                      
+                      webView.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
+                          try {
+                              val request = DownloadManager.Request(Uri.parse(url))
+                              request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                              request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(url, contentDisposition, mimeType))
+                              (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+                              Toast.makeText(applicationContext, "Downloading...", Toast.LENGTH_SHORT).show()
+                          } catch (e: Exception) {}
                       }
+                      
+                      webView.webChromeClient = object : WebChromeClient() {
+                          override fun onShowFileChooser(webView: WebView, filePathCallback: ValueCallback<Array<Uri>>, fileChooserParams: FileChooserParams): Boolean {
+                              mFilePathCallback?.onReceiveValue(null)
+                              mFilePathCallback = filePathCallback
+                              try { startActivityForResult(fileChooserParams.createIntent(), FILECHOOSER_RESULTCODE) } catch (e: Exception) { return false }
+                              return true
+                          }
+                      }
+                      webView.loadUrl(getString(R.string.app_url))
+                  } catch (e: Exception) {
+                      Toast.makeText(this, "Safe Mode Loaded", Toast.LENGTH_SHORT).show()
                   }
-                  webView.loadUrl(getString(R.string.app_url))
               }
               override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
                   if (requestCode == FILECHOOSER_RESULTCODE) {
@@ -248,4 +274,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. Native XML Colors Active. 100% Crash-Proof."
+          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.config.packageName }}" --notes "Version ${{ github.run_number }}. Anti-Crash Image Protection Active."
