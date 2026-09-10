@@ -16,7 +16,7 @@
         .preview-img { max-width: 100px; max-height: 100px; margin-top: 10px; display: none; border-radius: 10px; }
         .toggle-container { display: flex; align-items: center; margin-top: 15px; }
         .toggle-container label { margin: 0 0 0 10px; font-weight: normal; }
-        .btn { display: block; width: 100%; padding: 15px; background: #198754; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center; }
+        .btn { display: block; width: 100%; padding: 15px; background: #198754; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center; transition: 0.3s; }
         .btn:disabled { background: #f39c12; cursor: wait; }
         .app-list { margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 20px; max-height: 400px; overflow-y: auto; }
         .app-card { background: var(--bg); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); }
@@ -31,10 +31,10 @@
 </head>
 <body>
 
-<!-- MAIN HOME PAGE -->
-<div class="container" id="mainPage">
+<div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>🚀 App Builder</h2>
+        <!-- DAY / NIGHT BUTTON -->
         <button id="themeToggle" onclick="toggleTheme()">🌙 Night</button>
     </div>
     
@@ -63,29 +63,14 @@
         <input type="text" id="packageName" placeholder="com.my.app" required>
         <div class="toggle-container"><input type="checkbox" id="googleLoginToggle" checked><label>Google Login (Chrome Bypass) ON</label></div>
         <div class="toggle-container"><input type="checkbox" id="downloadToggle" checked><label>App Download System ON</label></div>
+        
+        <!-- YAHI BUTTON DOWNLOAD MEIN BADLEGA -->
         <button type="submit" id="submitBtn" class="btn">🚀 Build Master App</button>
     </form>
 </div>
 
-<!-- NAYA DOWNLOAD PAGE (Hidden by default) -->
-<div class="container" id="downloadPage" style="display:none; text-align:center; padding-top: 40px;">
-    <button onclick="goBack()" style="float:left; padding:8px 15px; border-radius:5px; border:none; background:#6c757d; color:white; cursor:pointer;">🔙 Back</button>
-    <div style="clear:both; margin-bottom:30px;"></div>
-    
-    <div style="font-size: 50px; margin-bottom:10px;">📱</div>
-    <h1 id="dlAppName" style="margin-bottom: 5px;">App Name</h1>
-    <p id="dlAppPkg" style="color: #888; margin-top: 0;">com.pkg</p>
-    <p id="dlAppDate" style="font-size: 14px; font-weight:bold;">Date</p>
-    
-    <div style="margin: 40px 0;">
-        <a id="dlAppBtn" href="#" class="btn" style="text-decoration:none; display:inline-block; font-size: 18px; padding: 15px 40px; background:#0d6efd;">📥 Download APK Now</a>
-    </div>
-    
-    <p style="color:#198754; font-weight:bold;">✅ 100% Safe & Crash-Free Version</p>
-</div>
-
 <script>
-    // Day / Night Theme Logic
+    // Day/Night Logic
     function toggleTheme() {
         document.body.classList.toggle('dark-mode');
         const btn = document.getElementById('themeToggle');
@@ -101,21 +86,6 @@
     if(localStorage.getItem('theme') === 'dark') {
         document.body.classList.add('dark-mode');
         document.getElementById('themeToggle').innerText = "☀️ Day";
-    }
-
-    // Naya Download Page Logic
-    function openDownloadPage(name, pkg, date, url) {
-        document.getElementById('mainPage').style.display = 'none';
-        document.getElementById('downloadPage').style.display = 'block';
-        document.getElementById('dlAppName').innerText = name;
-        document.getElementById('dlAppPkg').innerText = pkg;
-        document.getElementById('dlAppDate').innerText = "Built on: " + date;
-        document.getElementById('dlAppBtn').href = url;
-    }
-
-    function goBack() {
-        document.getElementById('downloadPage').style.display = 'none';
-        document.getElementById('mainPage').style.display = 'block';
     }
 
     function showPreview(event, previewId) {
@@ -142,6 +112,7 @@
                 return 0;
             }
 
+            // List mein bhi directly naye tab mein download hoga
             appList.innerHTML = releases.map(release => {
                 const titleParts = release.name ? release.name.split(" | ") : ["My App", "com.my.app"];
                 const appName = titleParts[0];
@@ -158,7 +129,7 @@
                             <p>📅 Date: ${date}</p>
                         </div>
                         <div>
-                            <button onclick="openDownloadPage('${appName}', '${pkgName}', '${date}', '${downloadUrl}')" class="btn-install">⬇️ Install</button>
+                            <a href="${downloadUrl}" class="btn-install" target="_blank">⬇️ Install</a>
                             <button onclick="deleteApp(${release.id})" class="btn-delete">🗑️ Delete</button>
                         </div>
                     </div>
@@ -222,17 +193,24 @@
                             const currentReleases = await checkResponse.json();
                             if (currentReleases.length > initialAppCount) {
                                 clearInterval(timer);
-                                btn.innerHTML = "✅ App Ban Gaya! Upar List Mein Dekhein";
-                                btn.style.backgroundColor = "#28a745";
+                                
+                                // YAHAN BUTTON DIRECT DOWNLOAD MEIN BADLEGA
+                                const newRelease = currentReleases[0];
+                                const apkAsset = newRelease.assets && newRelease.assets.find(a => a.name.endsWith('.apk'));
+                                const downloadUrl = apkAsset ? apkAsset.browser_download_url : newRelease.html_url;
+
+                                btn.innerHTML = "⬇️ Naya App Download Karein";
+                                btn.style.backgroundColor = "#0d6efd";
+                                btn.disabled = false;
+                                btn.type = "button"; // form submit hone se rokne ke liye
+                                
+                                btn.onclick = () => {
+                                    window.open(downloadUrl, '_blank');
+                                    // 2 second baad wapas form normal ho jayega naya app banane ke liye
+                                    setTimeout(() => { location.reload(); }, 2000);
+                                };
+                                
                                 fetchApps(); 
-                                setTimeout(() => {
-                                    btn.innerHTML = "🚀 Build Master App";
-                                    btn.style.backgroundColor = "#198754";
-                                    btn.disabled = false;
-                                    document.getElementById('buildForm').reset();
-                                    document.getElementById('iconPreview').style.display = 'none';
-                                    document.getElementById('splashPreview').style.display = 'none';
-                                }, 4000);
                             }
                         }
                     } catch (e) {}
