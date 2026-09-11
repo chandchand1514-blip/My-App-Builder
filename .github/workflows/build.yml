@@ -43,20 +43,17 @@ jobs:
 
       - name: Generate Master App Code
         run: |
-          RAW_PKG="${{ github.event.client_payload.config.packageName }}"
+          RAW_PKG="${{ github.event.client_payload.packageName }}"
           PKG=$(echo "$RAW_PKG" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:].')
           if [[ "$PKG" != *"."* ]] && [ -n "$PKG" ]; then PKG="com.${PKG}.app"; fi
           if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
           PKG_DIR=$(echo "$PKG" | tr '.' '/')
 
-          THEME_COLOR="${{ github.event.client_payload.config.themeColor }}"
+          THEME_COLOR="${{ github.event.client_payload.themeColor }}"
           if [ -z "$THEME_COLOR" ] || [ "$THEME_COLOR" == "" ] || [ "$THEME_COLOR" == "null" ]; then THEME_COLOR="#000000"; fi
           
-          SPLASH_COLOR="${{ github.event.client_payload.config.splashColor }}"
+          SPLASH_COLOR="${{ github.event.client_payload.splashColor }}"
           if [ -z "$SPLASH_COLOR" ] || [ "$SPLASH_COLOR" == "" ] || [ "$SPLASH_COLOR" == "null" ]; then SPLASH_COLOR="#ffffff"; fi
-          
-          BG_COLOR="${{ github.event.client_payload.config.backgroundColor }}"
-          if [ -z "$BG_COLOR" ] || [ "$BG_COLOR" == "" ] || [ "$BG_COLOR" == "null" ]; then BG_COLOR="#ffffff"; fi
 
           mkdir -p "app/src/main/java/$PKG_DIR"
           mkdir -p app/src/main/res/values
@@ -67,8 +64,10 @@ jobs:
           
           cp master.keystore app/master.keystore
           
-          curl -L "${{ github.event.client_payload.appIconUrl }}" -o temp_icon.img
-          convert temp_icon.img -resize 512x512 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || echo "Skipping icon..."
+          if [ -n "${{ github.event.client_payload.appIconUrl }}" ]; then
+            curl -L "${{ github.event.client_payload.appIconUrl }}" -o temp_icon.img || true
+            convert temp_icon.img -resize 512x512 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || true
+          fi
           
           cat << 'EOF' > gradle.properties
           android.useAndroidX=true
@@ -156,7 +155,7 @@ jobs:
           cat << EOF > app/src/main/res/layout/activity_main.xml
           <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="${BG_COLOR}">
+              android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
               <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="match_parent" />
           </LinearLayout>
           EOF
@@ -241,4 +240,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId }}" app/build/outputs/apk/release/app-release.apk --title "Release"
+          gh release create "build-${{ github.event.client_payload.buildId || github.run_number }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.packageName }}" --notes "Auto-generated APK build."
