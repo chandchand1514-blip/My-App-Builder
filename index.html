@@ -162,10 +162,14 @@
         };
 
         try {
-            // Yahan /build ki jagah /build-app kar diya gaya hai jo server se direct match karega
-            await fetch('/build-app', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+            // Yahan poora Render URL daal diya gaya hai taaki request mein koi galti na ho
+            await fetch('https://my-app-builder-82nd.onrender.com/build-app', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(formData) 
+            });
+
             let elapsedSeconds = 0;
-            
             const timer = setInterval(async () => {
                 elapsedSeconds++;
                 const minutes = Math.floor(elapsedSeconds / 60);
