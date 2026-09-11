@@ -83,13 +83,18 @@ app.delete('/delete-app/:id', async (req, res) => {
     }
 });
 
-// Build Trigger Handler
+// Build Trigger Handler (With Debug Logs)
 const buildHandler = async (req, res) => {
+    console.log("🔥 Build API Hit Ho Gayi Hai!");
+    console.log("📦 Received Data:", req.body);
+    
     try {
         if (!process.env.GITHUB_REPO || !process.env.GITHUB_TOKEN) {
+            console.log("❌ Error: GITHUB_REPO ya GITHUB_TOKEN missing hai Render mein!");
             return res.status(500).json({ success: false, error: 'GitHub Keys Missing' });
         }
-        await axios.post(
+
+        const githubResponse = await axios.post(
             `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
             {
                 event_type: 'build-app',
@@ -98,14 +103,17 @@ const buildHandler = async (req, res) => {
             {
                 headers: {
                     Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-                    Accept: 'application/vnd.github.v3+json'
+                    Accept: 'application/vnd.github.v3+json',
+                    'User-Agent': 'Node.js-Server'
                 }
             }
         );
+
+        console.log("✅ GitHub Trigger Success:", githubResponse.status);
         res.status(200).json({ success: true, message: 'Build started' });
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ success: false, error: 'Build trigger failed' });
+        console.error("❌ GitHub Trigger Failed Error:", error.response ? error.response.data : error.message);
+        res.status(500).json({ success: false, error: error.message });
     }
 };
 
