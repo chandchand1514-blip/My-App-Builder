@@ -3,8 +3,12 @@ const express = require('express');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
+const path = require('path');
 
 const app = express();
+
+// Yeh line aapki website ki images, CSS aur JS files ko load hone degi
+app.use(express.static(__dirname));
 
 // Session Setup
 app.use(session({
@@ -36,9 +40,9 @@ passport.use(new GoogleStrategy({
   }
 ));
 
-// Default Route
+// YEH ROUTE AB AAPKI index.html FILE DIKHAYEGA
 app.get('/', (req, res) => {
-    res.send('App Builder Backend is Live!');
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Google Login Route
@@ -46,11 +50,10 @@ app.get('/auth/google',
   passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
-// Callback Route - YAHI CODE WHITE SCREEN HATAYEGA
+// Callback Route (Jo app mein wapas bhejta hai)
 app.get('/auth/google/callback', 
   passport.authenticate('google', { failureRedirect: '/' }),
   function(req, res) {
-    // Login success hone par token ke sath direct app ke intent par redirect
     res.redirect(`myappauth://callback?token=${req.user.token}`);
   }
 );
