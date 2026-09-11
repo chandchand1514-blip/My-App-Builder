@@ -95,7 +95,6 @@
                 const downloadUrl = apkAsset ? apkAsset.browser_download_url : release.html_url;
                 const date = new Date(release.published_at).toLocaleDateString();
                 
-                // Naye app ko highlight karne ka code
                 const isNewStyle = index === 0 ? 'border: 2px solid #28a745; background: #e8f8ec;' : 'border: 1px solid #eee; background: #f9f9f9;';
 
                 return `
@@ -163,7 +162,8 @@
         };
 
         try {
-            await fetch('/build', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+            // Yahan /build ki jagah /build-app kar diya gaya hai jo server se direct match karega
+            await fetch('/build-app', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
             let elapsedSeconds = 0;
             
             const timer = setInterval(async () => {
@@ -179,7 +179,6 @@
                             const currentReleases = await checkResponse.json();
                             if (currentReleases.length > initialAppCount) {
                                 clearInterval(timer);
-                                // ✅ Form reset system poori tarah hata diya gaya
                                 btn.innerHTML = "✅ App Ban Gaya! Upar List Mein Check Karein ⬆️";
                                 btn.style.backgroundColor = "#28a745";
                                 fetchApps(); 
