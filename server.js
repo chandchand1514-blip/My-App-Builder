@@ -9,13 +9,11 @@ const axios = require('axios');
 
 const app = express();
 
-// 1. Data Middlewares (Website aur Server ke connection ke liye)
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(__dirname));
 
-// 2. Session Setup
 app.use(session({
     secret: 'my_secret_key_123',
     resave: false,
@@ -28,7 +26,6 @@ app.use(passport.session());
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
-// 3. Google OAuth Setup (White screen bypass)
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -45,12 +42,48 @@ passport.use(new GoogleStrategy({
   }
 ));
 
-// 4. Website Route (Aapka index.html design dikhane ke liye)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 5. Build App Trigger (GitHub Actions ko button dabate hi start karne ke liye)
+// App List Load karne ke liye Releases API
+app.get('/api/releases', async (req, res) => {
+    try {
+        const response = await axios.get(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/releases`,
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+                    Accept: 'application/vnd.github.v3+json'
+                }
+            }
+        );
+        res.json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch releases' });
+    }
+});
+
+// App Delete karne ke liye route
+app.delete('/delete-app/:id', async (req, res) => {
+    try {
+        const releaseId = req.params.id;
+        await axios.delete(
+            `https://api.github.com/repos/${process.env.GITHUB_REPO}/releases/${releaseId}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+                    Accept: 'application/vnd.github.v3+json'
+                }
+            }
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete release' });
+    }
+});
+
+// Build Trigger Handler
 const buildHandler = async (req, res) => {
     try {
         if (!process.env.GITHUB_REPO || !process.env.GITHUB_TOKEN) {
@@ -76,12 +109,11 @@ const buildHandler = async (req, res) => {
     }
 };
 
-// Website kisi bhi link par request bheje, build trigger ho jayega
 app.post('/build', buildHandler);
 app.post('/api/build', buildHandler);
 app.post('/build-app', buildHandler);
 
-// 6. Google Login Routes (App mein directly wapas bhejegi)
+// Google Login Routes
 app.get('/auth/google',
   passport.authenticate('google', { scope: ['profile', 'email'] })
 );
@@ -93,7 +125,6 @@ app.get('/auth/google/callback',
   }
 );
 
-// 7. Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
