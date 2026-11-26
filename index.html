@@ -1,212 +1,75 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="hi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professional App Builder</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h2, h3 { text-align: center; color: #333; }
-        label { font-weight: bold; margin-top: 10px; display: block; }
-        input[type="text"], input[type="url"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        input[type="file"] { margin-top: 5px; }
-        input[type="color"] { width: 100%; height: 40px; border: none; margin-top: 5px; }
-        .preview-img { max-width: 100px; max-height: 100px; margin-top: 10px; display: none; border-radius: 10px; }
-        .toggle-container { display: flex; align-items: center; margin-top: 15px; }
-        .toggle-container label { margin: 0 0 0 10px; font-weight: normal; }
-        .btn { display: block; width: 100%; padding: 15px; background: #198754; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center; }
-        .btn:disabled { background: #f39c12; cursor: wait; }
-        .app-list { margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 20px; max-height: 400px; overflow-y: auto; }
-        .app-card { padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: 0.3s;}
-        .app-info h4 { margin: 0 0 5px 0; }
-        .app-info p { margin: 0; color: #666; font-size: 13px; }
-        .btn-install { background: #0d6efd; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 13px; display: block; text-align: center; margin-bottom: 5px;}
-        .btn-delete { background: #dc3545; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 13px; border: none; cursor: pointer; width: 100%;}
-        .btn-install:hover { background: #0b5ed7; }
-        .btn-delete:hover { background: #bb2d3b; }
-        .flex-row { display: flex; gap: 10px; }
-        .flex-col { flex: 1; }
-    </style>
-</head>
-<body>
-<div class="container">
-    <h2>🚀 Professional App Builder</h2>
-    
-    <div class="app-list">
-        <h3>🔄 Aapke Banaye Hue Apps</h3>
-        <div id="appList"><p style="text-align: center; color: #777;">Loading...</p></div>
-    </div>
-
-    <h3>📱 Build New / Edit App</h3>
-    <form id="buildForm">
-        <label>App Ka Naam:</label>
-        <input type="text" id="appName" placeholder="e.g. My Shop" required>
-        <label>Website Ka Link (URL):</label>
-        <input type="url" id="appUrl" placeholder="https://example.com" required>
-        <label>1. App Icon:</label>
-        <input type="file" accept="image/*" onchange="showPreview(event, 'iconPreview')">
-        <img id="iconPreview" class="preview-img">
-        <label>2. Splash Logo:</label>
-        <input type="file" accept="image/*" onchange="showPreview(event, 'splashPreview')">
-        <img id="splashPreview" class="preview-img">
-        <div class="flex-row">
-            <div class="flex-col"><label>Theme Color</label><input type="color" id="themeColor" value="#000000"></div>
-            <div class="flex-col"><label>Splash Color</label><input type="color" id="splashColor" value="#ffffff"></div>
-        </div>
-        <label>Package Name (Zaroori Hai):</label>
-        <input type="text" id="packageName" placeholder="com.my.app" required>
-        <div class="toggle-container"><input type="checkbox" id="googleLoginToggle" checked><label>Google Login (Chrome Bypass) ON</label></div>
-        <div class="toggle-container"><input type="checkbox" id="downloadToggle" checked><label>App Download System ON</label></div>
-        <button type="submit" id="submitBtn" class="btn">🚀 Build Master App</button>
-    </form>
-</div>
-
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#071a33"><title>My App Builder</title>
+<style>
+:root{--bg:#061426;--panel:#0d223b;--panel2:#102b49;--line:#24415f;--text:#edf5ff;--muted:#9bb0c8;--green:#20c997;--blue:#4d9fff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#12365a 0,#061426 55%);color:var(--text);font:15px system-ui,Arial,sans-serif;padding:18px}
+.wrap{max-width:900px;margin:auto}.hero{padding:22px 18px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(135deg,#102d4c,#0a1d33);margin-bottom:16px}
+.hero h1{margin:0 0 7px;font-size:26px}.hero p{color:var(--muted);margin:0;line-height:1.5}.tag{display:inline-block;color:#8ff4d5;background:#103e3a;border:1px solid #1c6a5d;border-radius:30px;padding:5px 10px;font-size:12px;margin-bottom:10px}
+.panel{background:rgba(13,34,59,.96);border:1px solid var(--line);border-radius:17px;padding:17px;margin:14px 0}.panel h2{font-size:18px;margin:0 0 14px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{min-width:0}.field.full{grid-column:1/-1}label{display:block;font-weight:650;margin:8px 0 6px;font-size:13px;color:#d8e8f8}input,select{width:100%;padding:12px;border:1px solid #31516f;border-radius:10px;background:#071a2e;color:white;font:inherit;min-height:44px}input[type=color]{padding:4px;height:45px}input[type=checkbox]{width:18px;min-height:18px;accent-color:var(--green)}input[type=file]{padding:8px}.hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.check{display:flex;align-items:center;gap:9px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#0a1d32}.check label{margin:0;font-weight:500}.btn{width:100%;border:0;border-radius:12px;padding:15px;background:linear-gradient(90deg,#16a879,#20c997);color:#03251e;font-size:16px;font-weight:800;margin-top:15px}.btn:disabled{opacity:.65}.secondary{background:#153654;color:#eaf4ff;border:1px solid #31516f}.status{padding:12px;border-radius:10px;background:#091b2e;color:#b8d1e9;margin-top:12px;white-space:pre-wrap}.app{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:12px;margin:9px 0;background:#0a1d32}.app small{display:block;color:var(--muted);margin-top:4px}.app a{color:#8fc6ff}.preview{max-width:78px;max-height:78px;object-fit:contain;margin-top:8px;border-radius:12px;display:none;background:#fff}.section-note{color:#8ff4d5;font-size:12px;margin:-5px 0 12px}.foot{color:var(--muted);font-size:12px;text-align:center;padding:18px}
+@media(max-width:600px){body{padding:10px}.grid,.checks{grid-template-columns:1fr}.hero h1{font-size:22px}.panel{padding:14px}.app{align-items:flex-start;flex-direction:column}}
+</style></head>
+<body><main class="wrap">
+<header class="hero"><span class="tag">NO-CODE ANDROID STUDIO</span><h1>My App Builder</h1><p>Apni website ko Android app mein badlein. App identity, icon, splash screen, navigation, native permissions aur build options ek jagah set karein.</p></header>
+<section class="panel"><h2>📦 Aapke banaye hue apps</h2><div id="appList">Apps load ho rahe hain…</div></section>
+<form id="buildForm">
+<section class="panel"><h2>1. App ki basic details</h2><div class="grid">
+<div class="field"><label>App ka naam *</label><input id="appName" required maxlength="40" placeholder="My Shop"></div>
+<div class="field"><label>Package ID *</label><input id="packageName" required value="com.example.myapp" placeholder="com.company.app"><div class="hint">Lowercase letters, numbers aur dots. Example: com.company.shop</div></div>
+<div class="field full"><label>Website / App URL *</label><input id="appUrl" type="url" required placeholder="https://example.com"></div>
+<div class="field"><label>Version name</label><input id="versionName" value="1.0.0"></div>
+<div class="field"><label>Version code</label><input id="versionCode" type="number" min="1" value="1"></div>
+<div class="field"><label>Screen orientation</label><select id="orientation"><option value="default">Auto rotate</option><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></div>
+<div class="field"><label>Build type</label><select id="buildType"><option value="apk">Android APK (install)</option><option value="both">APK + AAB (testing)</option></select></div>
+</div></section>
+<section class="panel"><h2>2. Logo, icon aur splash screen</h2><div class="grid">
+<div class="field"><label>App icon image URL</label><input id="appIconUrl" type="url" placeholder="https://.../icon.png"><div class="hint">Square PNG recommended, 512×512. Image public URL se accessible honi chahiye.</div></div>
+<div class="field"><label>Splash logo image URL</label><input id="splashLogoUrl" type="url" placeholder="https://.../logo.png"></div>
+<div class="field"><label>App theme color</label><input id="themeColor" type="color" value="#071a33"></div>
+<div class="field"><label>Splash background</label><input id="splashColor" type="color" value="#071a33"></div>
+<div class="field"><label>Splash screen duration</label><select id="splashDuration"><option value="1500">1.5 seconds</option><option value="2500" selected>2.5 seconds</option><option value="3000">3 seconds</option><option value="4000">4 seconds</option></select></div>
+<div class="field"><label>Status bar style</label><select id="statusBar"><option value="dark">Dark icons</option><option value="light" selected>Light icons</option></select></div>
+</div></section>
+<section class="panel"><h2>3. Capacitor native permissions</h2><p class="section-note">Sirf wahi permissions ON karein jo aapki app ko waqai chahiye.</p><div class="checks">
+<div class="check"><input type="checkbox" id="permCamera"><label for="permCamera">Camera</label></div>
+<div class="check"><input type="checkbox" id="permMicrophone"><label for="permMicrophone">Microphone / audio</label></div>
+<div class="check"><input type="checkbox" id="permLocation"><label for="permLocation">Location / GPS</label></div>
+<div class="check"><input type="checkbox" id="permNotifications" checked><label for="permNotifications">Notifications</label></div>
+<div class="check"><input type="checkbox" id="permPhotos"><label for="permPhotos">Photos / media</label></div>
+<div class="check"><input type="checkbox" id="permFiles"><label for="permFiles">File access</label></div>
+<div class="check"><input type="checkbox" id="permBluetooth"><label for="permBluetooth">Bluetooth</label></div>
+</div></section>
+<section class="panel"><h2>4. Capacitor plugins</h2><p class="section-note">Selected plugins Android build mein install honge; kuch features ko app website mein integration bhi chahiye.</p><div class="checks">
+<div class="check"><input type="checkbox" id="plugCamera"><label for="plugCamera">Camera</label></div>
+<div class="check"><input type="checkbox" id="plugGeolocation"><label for="plugGeolocation">Geolocation</label></div>
+<div class="check"><input type="checkbox" id="plugFilesystem"><label for="plugFilesystem">Filesystem</label></div>
+<div class="check"><input type="checkbox" id="plugShare"><label for="plugShare">Share</label></div>
+<div class="check"><input type="checkbox" id="plugDevice"><label for="plugDevice">Device info</label></div>
+<div class="check"><input type="checkbox" id="plugNetwork"><label for="plugNetwork">Network status</label></div>
+<div class="check"><input type="checkbox" id="plugPreferences"><label for="plugPreferences">Preferences / storage</label></div>
+<div class="check"><input type="checkbox" id="plugBrowser"><label for="plugBrowser">Browser / external links</label></div>
+<div class="check"><input type="checkbox" id="plugLocalNotifications"><label for="plugLocalNotifications">Local notifications</label></div>
+<div class="check"><input type="checkbox" id="plugStatusBar" checked><label for="plugStatusBar">Status bar control</label></div>
+<div class="check"><input type="checkbox" id="plugSplash" checked><label for="plugSplash">Splash screen</label></div>
+<div class="check"><input type="checkbox" id="plugHaptics"><label for="plugHaptics">Haptics / vibration</label></div>
+</div></section>
+<section class="panel"><h2>5. Android app behaviour</h2><div class="checks">
+<div class="check"><input type="checkbox" id="fullScreen"><label for="fullScreen">Full screen / hide status bar</label></div>
+<div class="check"><input type="checkbox" id="keepAwake"><label for="keepAwake">Keep screen awake</label></div>
+<div class="check"><input type="checkbox" id="externalLinks" checked><label for="externalLinks">Open external links in browser</label></div>
+<div class="check"><input type="checkbox" id="googleLogin"><label for="googleLogin">Google login support (website must configure OAuth)</label></div>
+</div><div class="hint">Google sign-in ka redirect URL aur OAuth provider aapki website / identity provider par configure karna hota hai. Builder khud login account nahi banata.</div></section>
+<button class="btn" id="submitBtn" type="submit">⚡ Capacitor Android Build shuru karein</button>
+<div id="buildStatus" class="status" role="status">Build status yahan dikhega.</div>
+</form>
+<div class="foot">My App Builder · Build cloud par GitHub Actions se hota hai. APK ko phone par install karne se pehle permissions check karein.</div>
+</main>
 <script>
-    function showPreview(event, previewId) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = document.getElementById(previewId);
-                img.src = e.target.result;
-                img.style.display = "block";
-            }
-            reader.readAsDataURL(file);
-        }
-    }
-
-    async function fetchApps() {
-        try {
-            const response = await fetch('/api/releases?t=' + new Date().getTime());
-            const releases = await response.json();
-            const appList = document.getElementById('appList');
-            
-            if (!releases || releases.length === 0) {
-                appList.innerHTML = '<p style="text-align: center; color: #777;">Koi app nahi mila.</p>';
-                return 0;
-            }
-
-            appList.innerHTML = releases.map((release, index) => {
-                const titleParts = release.name ? release.name.split(" | ") : ["My App", "com.my.app"];
-                const appName = titleParts[0];
-                const pkgName = titleParts[1] || "com.universal.app";
-                const apkAsset = release.assets && release.assets.find(a => a.name.endsWith('.apk'));
-                const downloadUrl = apkAsset ? apkAsset.browser_download_url : release.html_url;
-                const date = new Date(release.published_at).toLocaleDateString();
-                
-                const isNewStyle = index === 0 ? 'border: 2px solid #28a745; background: #e8f8ec;' : 'border: 1px solid #eee; background: #f9f9f9;';
-
-                return `
-                    <div class="app-card" id="app-${release.id}" style="${isNewStyle}">
-                        <div class="app-info">
-                            <h4>📱 ${appName}</h4>
-                            <p>📦 ${pkgName}</p>
-                            <p>📅 Date: ${date}</p>
-                        </div>
-                        <div>
-                            <a href="${downloadUrl}" class="btn-install" target="_blank">⬇️ Install</a>
-                            <button onclick="deleteApp(${release.id})" class="btn-delete">🗑️ Delete</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            return releases.length; 
-        } catch (error) {
-            document.getElementById('appList').innerHTML = '<p style="text-align: center; color: #777;">App list load nahi ho payi.</p>';
-            return 0;
-        }
-    }
-
-    async function deleteApp(releaseId) {
-        if(confirm("Kya aap sach mein is app ko delete karna chahte hain?")) {
-            const appCard = document.getElementById(`app-${releaseId}`);
-            appCard.style.opacity = "0.4"; 
-            appCard.style.pointerEvents = "none";
-            
-            try {
-                const response = await fetch(`/delete-app/${releaseId}`, { method: 'DELETE' });
-                if(response.ok) {
-                    fetchApps(); 
-                } else {
-                    alert("Delete fail ho gaya.");
-                    appCard.style.opacity = "1";
-                    appCard.style.pointerEvents = "auto";
-                }
-            } catch (error) { 
-                alert("Delete fail ho gaya."); 
-                appCard.style.opacity = "1";
-                appCard.style.pointerEvents = "auto";
-            }
-        }
-    }
-
-    document.getElementById('buildForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('submitBtn');
-        const initialAppCount = await fetchApps();
-
-        btn.innerHTML = "⏳ App Ban Raha Hai... (0:00)";
-        btn.disabled = true;
-
-        const formData = {
-            appName: document.getElementById('appName').value,
-            appUrl: document.getElementById('appUrl').value,
-            packageName: document.getElementById('packageName').value,
-            themeColor: document.getElementById('themeColor').value,
-            splashColor: document.getElementById('splashColor').value,
-            googleLoginEnabled: document.getElementById('googleLoginToggle').checked,
-            downloadSystemEnabled: document.getElementById('downloadToggle').checked,
-            appIconUrl: document.getElementById('iconPreview').src || "",
-            splashLogoUrl: document.getElementById('splashPreview').src || ""
-        };
-
-        try {
-            // Yahan poora Render URL daal diya gaya hai taaki request mein koi galti na ho
-            await fetch('https://my-app-builder-82nd.onrender.com/build-app', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(formData) 
-            });
-
-            let elapsedSeconds = 0;
-            const timer = setInterval(async () => {
-                elapsedSeconds++;
-                const minutes = Math.floor(elapsedSeconds / 60);
-                const seconds = elapsedSeconds % 60;
-                btn.innerHTML = `⏳ App Ban Raha Hai... (${minutes}:${seconds < 10 ? '0' : ''}${seconds})`;
-
-                if (elapsedSeconds % 8 === 0) {
-                    try {
-                        const checkResponse = await fetch('/api/releases?t=' + new Date().getTime());
-                        if (checkResponse.ok) {
-                            const currentReleases = await checkResponse.json();
-                            if (currentReleases.length > initialAppCount) {
-                                clearInterval(timer);
-                                btn.innerHTML = "✅ App Ban Gaya! Upar List Mein Check Karein ⬆️";
-                                btn.style.backgroundColor = "#28a745";
-                                fetchApps(); 
-                            }
-                        }
-                    } catch (e) {}
-                }
-                
-                if (elapsedSeconds > 300) {
-                    clearInterval(timer);
-                    btn.innerHTML = "⚠️ App Ban Gaya Hoga, Ek Baar Page Refresh Karein";
-                    btn.style.backgroundColor = "#f39c12";
-                    btn.disabled = false;
-                }
-            }, 1000);
-        } catch (error) {
-            alert("❌ Server Error: Build trigger nahi hua.");
-            btn.innerText = "🚀 Build Master App";
-            btn.style.backgroundColor = "#198754";
-            btn.disabled = false;
-        }
-    });
-
-    window.onload = fetchApps;
-</script>
-</body>
-</html>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function fetchApps(){try{const r=await fetch('/api/releases?t='+Date.now());if(!r.ok)throw Error();const a=await r.json();$('appList').innerHTML=a.length?a.map(x=>{const title=esc(x.name||'My App');const asset=(x.assets||[]).find(z=>z.name.endsWith('.apk'));return '<div class="app"><div><b>'+title+'</b><small>'+new Date(x.published_at).toLocaleString()+'</small></div><div>'+(asset?'<a target="_blank" rel="noopener" href="'+esc(asset.browser_download_url)+'">APK download</a>':'<a target="_blank" rel="noopener" href="'+esc(x.html_url)+'">Build details</a>')+'</div></div>'}).join(''):'<p class="hint">Abhi koi generated app nahi hai.</p>'}catch(e){$('appList').textContent='App list abhi load nahi ho saki.'}}
+const checks=['permCamera','permMicrophone','permLocation','permNotifications','permPhotos','permFiles','permBluetooth','plugCamera','plugGeolocation','plugFilesystem','plugShare','plugDevice','plugNetwork','plugPreferences','plugBrowser','plugLocalNotifications','plugStatusBar','plugSplash','plugHaptics','fullScreen','keepAwake','externalLinks','googleLogin'];
+$('buildForm').addEventListener('submit',async e=>{e.preventDefault();const btn=$('submitBtn'),status=$('buildStatus');const pkg=$('packageName').value.trim();if(!/^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(pkg)){status.textContent='Package ID sahi format mein likhein, jaise com.company.app';return}const payload={appName:$('appName').value.trim(),appUrl:$('appUrl').value.trim(),packageName:pkg.toLowerCase(),versionName:$('versionName').value.trim()||'1.0.0',versionCode:Number($('versionCode').value)||1,orientation:$('orientation').value,buildType:$('buildType').value,appIconUrl:$('appIconUrl').value.trim(),splashLogoUrl:$('splashLogoUrl').value.trim(),themeColor:$('themeColor').value,splashColor:$('splashColor').value,splashDuration:Number($('splashDuration').value),statusBar:$('statusBar').value};checks.forEach(k=>payload[k]=$ (k).checked);payload.buildId='build-'+Date.now();btn.disabled=true;btn.textContent='⏳ Build request bhej rahe hain…';status.textContent='GitHub Actions ko build request bheji ja rahi hai…';try{const r=await fetch('/api/build',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok||!d.success)throw Error(d.error||'Build request fail hui');status.textContent='Build start ho gaya. Build complete hone par APK neeche Apps list mein dikhega. GitHub Actions mein progress bhi check kar sakte hain.';btn.textContent='Build chal raha hai…';let n=0;const timer=setInterval(async()=>{n++;await fetchApps();if(n>=60){clearInterval(timer);btn.disabled=false;btn.textContent='⚡ Dobara Build karein';status.textContent+='\nBuild mein zyada waqt lag raha hai. Thodi der baad list refresh karein.'}},10000)}catch(err){status.textContent='Build start nahi hua: '+err.message;btn.disabled=false;btn.textContent='⚡ Capacitor Android Build shuru karein'}});fetchApps();
+</script></body></html>
