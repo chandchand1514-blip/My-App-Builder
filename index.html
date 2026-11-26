@@ -131,6 +131,7 @@ $('buildForm').addEventListener('submit',async e=>{
     pollBuild(d.buildId||buildId);
   }catch(err){
     status.textContent='Build start nahi hua: '+err.message;
+    localStorage.removeItem('myAppBuilderLastBuildId');
     btn.disabled=false;btn.textContent='⚡ Capacitor Android Build shuru karein';
   }
 })
