@@ -4,7 +4,8 @@
   "description": "App Builder Node.js Backend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "node --check server.js"
   },
   "dependencies": {
     "axios": "^1.6.2",
