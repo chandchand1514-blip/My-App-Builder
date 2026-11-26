@@ -55,13 +55,12 @@ jobs:
               raise SystemExit("App URL must use HTTPS")
           callback=clean(p.get("callbackUrl"), "", 500)
           app_link=clean(p.get("appLinkUrl"), "", 1000)
-if callback:
-  from urllib.parse import urlparse
-  u=urlparse(callback)
-  if not u.scheme or not u.netloc and not u.path:
-    raise SystemExit("Invalid callback URL. Example: staffpro://auth/callback")
-  if any(ch.isspace() for ch in callback):
-    raise SystemExit("Callback URL cannot contain spaces")
+          if callback:
+              from urllib.parse import urlparse
+              u=urlparse(callback)
+              if not u.scheme or not (u.netloc or u.path):
+              if any(ch.isspace() for ch in callback):
+                  raise SystemExit("Callback URL cannot contain spaces")
               raise SystemExit("Invalid callback URL. Example: staffpro://auth/callback")
           if app_link and not app_link.startswith("https://"):
               raise SystemExit("HTTPS App Link must start with https://")
