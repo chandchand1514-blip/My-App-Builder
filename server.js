@@ -9,7 +9,7 @@ const crypto = require('crypto');
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '7mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(express.static(__dirname));
 
@@ -47,6 +47,24 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+
+app.post('/api/upload-image', async (req, res) => {
+  if (!process.env.GITHUB_REPO || !process.env.GITHUB_TOKEN) return res.status(503).json({success:false,error:'GitHub image storage configured nahi hai'});
+  const {fileName,mimeType,data}=req.body||{};
+  const types={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'};
+  if(!types[mimeType]||typeof data!=='string'||!data) return res.status(400).json({success:false,error:'PNG, JPG ya WebP image chunein'});
+  const bytes=Buffer.from(data,'base64');
+  if(!bytes.length||bytes.length>4*1024*1024) return res.status(413).json({success:false,error:'Image 4 MB se chhoti honi chahiye'});
+  const name=String(fileName||'image').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30)||'image';
+  const assetPath='builder-assets/'+crypto.randomUUID()+'-'+name+'.'+types[mimeType];
+  try{
+    const response=await axios.put('https://api.github.com/repos/'+process.env.GITHUB_REPO+'/contents/'+assetPath,
+      {message:'Upload app builder image asset',content:bytes.toString('base64')},
+      {headers:{Authorization:'Bearer '+process.env.GITHUB_TOKEN,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'My-App-Builder'},timeout:30000});
+    res.status(201).json({success:true,url:response.data.content.download_url});
+  }catch(error){console.error('Builder image upload failed:',error.response?.status||error.message);res.status(502).json({success:false,error:'Image GitHub storage mein save nahi ho saki'});}
+});
 
 app.get('/api/releases', async (req, res) => {
   try {
@@ -137,10 +155,12 @@ function buildHandler(req, res) {
   const appLinkUrl = String(p.appLinkUrl || '').trim();
   if (appLinkUrl && !validHttps(appLinkUrl)) return res.status(400).json({ success: false, error: 'HTTPS App Link valid HTTPS URL hona chahiye' });
   const appIconUrl = String(p.appIconUrl || '').trim();
-  if (appIconUrl && !validHttps(appIconUrl)) return res.status(400).json({ success: false, error: 'App icon URL HTTPS hona chahiye' });
+  const splashImageUrl = String(p.splashImageUrl || '').trim();
+  if (appIconUrl && !validHttps(appIconUrl)) return res.status(400).json({ success: false, error: 'App icon image upload sahi nahi hai' });
+  if (splashImageUrl && !validHttps(splashImageUrl)) return res.status(400).json({ success: false, error: 'Splash image upload sahi nahi hai' });
 
   const payload = {
-    appName, packageName, appUrl, callbackUrl, appLinkUrl, appIconUrl,
+    appName, packageName, appUrl, callbackUrl, appLinkUrl, appIconUrl, splashImageUrl,
     versionName: String(p.versionName || '1.0.0').slice(0, 30),
     versionCode: Math.max(1, Math.min(2100000000, Number.parseInt(p.versionCode, 10) || 1)),
     orientation: ['default','portrait','landscape'].includes(p.orientation) ? p.orientation : 'default',
