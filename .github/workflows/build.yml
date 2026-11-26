@@ -53,6 +53,12 @@ jobs:
           app_url=clean(p.get("appUrl"), "", 2000)
           if not app_url.startswith("https://"):
               raise SystemExit("App URL must use HTTPS")
+          callback=clean(p.get("callbackUrl"), "", 500)
+          app_link=clean(p.get("appLinkUrl"), "", 1000)
+          if callback and not re.fullmatch(r"[a-z][a-z0-9+.-]*://[A-Za-z0-9._~!          version_name=clean(p.get("versionName"), "1.0.0", 30)'()*+,;=:@%/-]*", callback):
+              raise SystemExit("Invalid callback URL. Example: staffpro://auth/callback")
+          if app_link and not app_link.startswith("https://"):
+              raise SystemExit("HTTPS App Link must start with https://")
           version_name=clean(p.get("versionName"), "1.0.0", 30)
           try: version_code=max(1,int(p.get("versionCode",1)))
           except: version_code=1
@@ -144,6 +150,27 @@ jobs:
                   root.insert(0,el); existing.add(name)
           activity=root.find(".//activity")
           if activity is not None:
+            from urllib.parse import urlparse
+            if os.environ.get("CALLBACK_URL"):
+              u=urlparse(os.environ["CALLBACK_URL"])
+              intent=ET.SubElement(activity,"intent-filter")
+              ET.SubElement(intent,"action").set(A+"name","android.intent.action.VIEW")
+              ET.SubElement(intent,"category").set(A+"name","android.intent.category.DEFAULT")
+              ET.SubElement(intent,"category").set(A+"name","android.intent.category.BROWSABLE")
+              data=ET.SubElement(intent,"data")
+              data.set(A+"scheme",u.scheme)
+              if u.netloc: data.set(A+"host",u.netloc)
+              if u.path: data.set(A+"path",u.path)
+            if os.environ.get("APP_LINK_URL"):
+              u=urlparse(os.environ["APP_LINK_URL"])
+              intent=ET.SubElement(activity,"intent-filter")
+              intent.set(A+"autoVerify","true")
+              ET.SubElement(intent,"action").set(A+"name","android.intent.action.VIEW")
+              ET.SubElement(intent,"category").set(A+"name","android.intent.category.DEFAULT")
+              ET.SubElement(intent,"category").set(A+"name","android.intent.category.BROWSABLE")
+              data=ET.SubElement(intent,"data")
+              data.set(A+"scheme","https"); data.set(A+"host",u.netloc)
+              if u.path: data.set(A+"path",u.path)
             orientation=p.get("orientation","default")
             if orientation in ("portrait","landscape"): activity.set(A+"screenOrientation",orientation)
           ET.register_namespace("android","http://schemas.android.com/apk/res/android")
