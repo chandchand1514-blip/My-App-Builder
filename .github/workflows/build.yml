@@ -266,25 +266,6 @@ jobs:
           path: generated/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-
-      - name: Write build failure summary
-        if: failure() && github.event_name == 'repository_dispatch'
-        env:
-          APP_NAME: ${{ steps.config.outputs.app_name }}
-          APP_ID: ${{ steps.config.outputs.app_id }}
-          BUILD_ID: ${{ github.event.client_payload.buildId || github.run_number }}
-        run: |
-          {
-            echo "## Android APK build failed"
-            echo ""
-            echo "- App: ${APP_NAME:-Unknown}"
-            echo "- Package: ${APP_ID:-Unknown}"
-            echo "- Build ID: ${BUILD_ID}"
-            echo "- Result: Failed"
-            echo ""
-            echo "Open the failed step above to inspect the exact compiler or configuration error."
-          } >> "$GITHUB_STEP_SUMMARY"
-
       - name: Publish build files
         if: github.event_name == 'repository_dispatch'
         env:
@@ -302,3 +283,25 @@ jobs:
           TAG="capacitor-${BUILD_ID}"
           gh release create "$TAG" dist/* --title "$APP_NAME | $APP_ID" --notes "Capacitor Android build. APK is debug-signed for testing. A Play Store production AAB needs your own protected release signing key."
           echo "Build published: $TAG"
+
+      - name: Write build result summary
+        if: always() && github.event_name == 'repository_dispatch'
+        env:
+          APP_NAME: ${{ steps.config.outputs.app_name }}
+          APP_ID: ${{ steps.config.outputs.app_id }}
+          BUILD_ID: ${{ github.event.client_payload.buildId || github.run_number }}
+          RESULT: ${{ job.status }}
+        run: |
+          {
+            echo "## Capacitor Android build"
+            echo ""
+            echo "- App: ${APP_NAME:-Unknown}"
+            echo "- Package: ${APP_ID:-Unknown}"
+            echo "- Build ID: ${BUILD_ID}"
+            echo "- Result: ${RESULT}"
+            if [ "${RESULT}" = "success" ]; then
+              echo "- APK: Published in the GitHub Release."
+            else
+              echo "- Details: Open the failed step in this workflow run to inspect the exact error."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
