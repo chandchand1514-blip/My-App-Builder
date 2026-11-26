@@ -70,6 +70,8 @@ jobs:
           if app_link and not app_link.startswith("https://"):
               raise SystemExit("HTTPS App Link must start with https://")
           version_name=clean(p.get("versionName"), "1.0.0", 30)
+          if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]*", version_name):
+              raise SystemExit("Version name may contain only letters, numbers, dot, underscore, plus and hyphen")
           try: version_code=max(1,int(p.get("versionCode",1)))
           except: version_code=1
           build_type=p.get("buildType","apk")
