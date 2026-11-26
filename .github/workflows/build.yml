@@ -1,4 +1,5 @@
 name: Capacitor Android Builder
+run-name: Capacitor build ${{ github.event.client_payload.buildId || github.run_id }} - ${{ github.event.client_payload.appName || 'PR validation' }}
 
 on:
   repository_dispatch:
@@ -264,6 +265,25 @@ jobs:
           name: builder-pr-test-apk
           path: generated/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+
+      - name: Write build failure summary
+        if: failure() && github.event_name == 'repository_dispatch'
+        env:
+          APP_NAME: ${{ steps.config.outputs.app_name }}
+          APP_ID: ${{ steps.config.outputs.app_id }}
+          BUILD_ID: ${{ github.event.client_payload.buildId || github.run_number }}
+        run: |
+          {
+            echo "## Android APK build failed"
+            echo ""
+            echo "- App: ${APP_NAME:-Unknown}"
+            echo "- Package: ${APP_ID:-Unknown}"
+            echo "- Build ID: ${BUILD_ID}"
+            echo "- Result: Failed"
+            echo ""
+            echo "Open the failed step above to inspect the exact compiler or configuration error."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish build files
         if: github.event_name == 'repository_dispatch'
