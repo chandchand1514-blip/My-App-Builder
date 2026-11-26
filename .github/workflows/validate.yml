@@ -19,6 +19,21 @@ jobs:
       - name: Validate GitHub Actions syntax
         uses: raven-actions/actionlint@v2
 
+      - name: Check Node.js server syntax
+        run: node --check server.js
+
+      - name: Check browser JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+          html = pathlib.Path('index.html').read_text()
+          match = re.search(r'<script>(.*?)</script>', html, re.S)
+          if not match:
+              raise SystemExit('Inline app script not found')
+          pathlib.Path('/tmp/builder-ui.js').write_text(match.group(1))
+          PY
+          node --check /tmp/builder-ui.js
+
       - name: Compile embedded Python build scripts
         run: |
           python3 - <<'PY'
