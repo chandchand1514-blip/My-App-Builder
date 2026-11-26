@@ -291,8 +291,16 @@ function buildHandler(req, res) {
   ).then(() => {
     res.status(202).json({ success: true, buildId: payload.buildId, message: 'Build request GitHub Actions ko bhej di gayi hai' });
   }).catch(error => {
-    console.error('GitHub build dispatch failed:', error.response?.status || error.message);
-    res.status(502).json({ success: false, error: 'GitHub par build request nahi ja saki' });
+    const githubStatus = error.response?.status || 0;
+    const githubMessage = String(error.response?.data?.message || error.message || 'Unknown GitHub API error').slice(0, 240);
+    console.error('GitHub build dispatch failed:', githubStatus, githubMessage);
+    let hint = '';
+    if (githubStatus === 401 || githubStatus === 403) hint = ' Render Environment mein GITHUB_TOKEN ka repository access aur Contents: Read and write permission check karein.';
+    else if (githubStatus === 404) hint = ' GITHUB_REPO ko chandchand1514-blip/My-App-Builder verify karein aur token ko isi repository ka access dein.';
+    res.status(502).json({
+      success: false,
+      error: 'GitHub request failed' + (githubStatus ? ' (' + githubStatus + ')' : '') + ': ' + githubMessage + hint
+    });
   });
 }
 
