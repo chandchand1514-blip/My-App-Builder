@@ -237,7 +237,11 @@ jobs:
               case "$density" in mdpi) size=48;; hdpi) size=72;; xhdpi) size=96;; xxhdpi) size=144;; xxxhdpi) size=192;; esac
               mkdir -p "generated/android/app/src/main/res/mipmap-$density"
               convert /tmp/custom-icon -auto-orient -thumbnail "${size}x${size}" -background white -gravity center -extent "${size}x${size}" "generated/android/app/src/main/res/mipmap-$density/ic_launcher.png"
+              cp "generated/android/app/src/main/res/mipmap-$density/ic_launcher.png" "generated/android/app/src/main/res/mipmap-$density/ic_launcher_round.png"
             done
+            # Use the gallery icon on modern Android too, rather than the template adaptive icon.
+            rm -f generated/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+            rm -f generated/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
           fi
           if [ -f /tmp/custom-splash ]; then
             mkdir -p generated/android/app/src/main/res/drawable
