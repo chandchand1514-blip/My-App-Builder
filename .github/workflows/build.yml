@@ -1,5 +1,5 @@
 name: Capacitor Android Builder
-run-name: Capacitor build ${{ github.event.client_payload.buildId || github.run_id }} - ${{ github.event.client_payload.appName || 'PR validation' }}
+run-name: Capacitor build ${{ github.event.client_payload.buildId || github.run_id }} - ${{ github.event.client_payload.config.appName || github.event.client_payload.appName || 'PR validation' }}
 
 on:
   repository_dispatch:
@@ -46,7 +46,8 @@ jobs:
           python3 - <<'PY'
           import json, os, re, sys
           event=json.load(open(os.environ["EVENT_PATH"], encoding="utf-8"))
-          p=event.get("client_payload") or {}
+          payload=event.get("client_payload") or {}
+          p=payload.get("config") if isinstance(payload.get("config"),dict) else payload
           if os.environ.get("EVENT_NAME") == "pull_request":
               p={"appName":"Builder Test","packageName":"com.example.buildertest","appUrl":"https://example.com","callbackUrl":"myappbuildertest://auth/callback","appLinkUrl":"https://example.com/auth/callback","buildType":"apk"}
           def clean(v, default="", limit=100):
@@ -134,8 +135,8 @@ jobs:
         env:
           EVENT_PATH: ${{ github.event_path }}
           APP_ID: ${{ steps.config.outputs.app_id }}
-          CALLBACK_URL: ${{ github.event.client_payload.callbackUrl }}
-          APP_LINK_URL: ${{ github.event.client_payload.appLinkUrl }}
+          CALLBACK_URL: ${{ github.event.client_payload.config.callbackUrl || github.event.client_payload.callbackUrl }}
+          APP_LINK_URL: ${{ github.event.client_payload.config.appLinkUrl || github.event.client_payload.appLinkUrl }}
           VERSION_NAME: ${{ steps.config.outputs.version_name }}
           VERSION_CODE: ${{ steps.config.outputs.version_code }}
         run: |
