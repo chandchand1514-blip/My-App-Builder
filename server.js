@@ -98,6 +98,101 @@ app.get('/api/releases', async (req, res) => {
   }
 });
 
+
+app.get('/api/build-status/:buildId', async (req, res) => {
+  const buildId = String(req.params.buildId || '');
+  if (!/^build-[a-zA-Z0-9-]{8,80}$/.test(buildId)) {
+    return res.status(400).json({ success: false, error: 'Invalid build ID' });
+  }
+  if (!process.env.GITHUB_REPO || !process.env.GITHUB_TOKEN) {
+    return res.status(503).json({ success: false, error: 'GitHub build service configured nahi hai' });
+  }
+  const headers = {
+    Authorization: 'Bearer ' + process.env.GITHUB_TOKEN,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'My-App-Builder'
+  };
+  try {
+    const runsResponse = await axios.get(
+      'https://api.github.com/repos/' + process.env.GITHUB_REPO + '/actions/runs',
+      { headers, params: { event: 'repository_dispatch', per_page: 100 }, timeout: 15000 }
+    );
+    const runs = runsResponse.data.workflow_runs || [];
+    const run = runs.find(item => String(item.display_title || item.name || '').includes(buildId));
+    res.set('Cache-Control', 'no-store');
+    if (!run) {
+      return res.json({ success: true, buildId, status: 'queued', progress: 3, message: 'GitHub Actions queue mein build request dhoondh rahe hain…', steps: [] });
+    }
+
+    let jobs = [];
+    try {
+      const jobsResponse = await axios.get(
+        'https://api.github.com/repos/' + process.env.GITHUB_REPO + '/actions/runs/' + run.id + '/jobs',
+        { headers, params: { per_page: 100 }, timeout: 15000 }
+      );
+      jobs = jobsResponse.data.jobs || [];
+    } catch (jobError) {
+      console.error('Build job status lookup failed:', jobError.response?.status || jobError.message);
+    }
+    const steps = jobs.flatMap(job => (job.steps || []).map(step => ({
+      name: step.name,
+      status: step.status,
+      conclusion: step.conclusion
+    })));
+    const activeStep = steps.find(step => step.status === 'in_progress') ||
+      steps.find(step => step.status === 'queued');
+    const failedStep = steps.find(step => step.conclusion === 'failure');
+    const finished = run.status === 'completed';
+    const successful = finished && run.conclusion === 'success';
+    const failed = finished && !successful;
+    let release = null;
+    if (successful) {
+      try {
+        const rel = await axios.get(
+          'https://api.github.com/repos/' + process.env.GITHUB_REPO + '/releases/tags/capacitor-' + buildId,
+          { headers, timeout: 12000 }
+        );
+        const apk = (rel.data.assets || []).find(asset => asset.name.toLowerCase().endsWith('.apk'));
+        const aab = (rel.data.assets || []).find(asset => asset.name.toLowerCase().endsWith('.aab'));
+        release = {
+          url: rel.data.html_url,
+          apkUrl: apk ? apk.browser_download_url : null,
+          apkName: apk ? apk.name : null,
+          aabUrl: aab ? aab.browser_download_url : null,
+          aabName: aab ? aab.name : null
+        };
+      } catch (releaseError) {
+        console.error('Build release lookup failed:', releaseError.response?.status || releaseError.message);
+      }
+    }
+    const totalSteps = Math.max(steps.length, 1);
+    const completedSteps = steps.filter(step => step.status === 'completed').length;
+    const progress = successful ? 100 : failed ? 100 : Math.min(95, Math.round((completedSteps / totalSteps) * 90) + (activeStep ? 5 : 0));
+    res.json({
+      success: true,
+      buildId,
+      runId: run.id,
+      status: successful ? 'success' : failed ? 'failure' : run.status === 'queued' ? 'queued' : 'running',
+      conclusion: run.conclusion,
+      progress,
+      message: successful
+        ? (release?.apkUrl ? 'APK taiyar hai. Download kar sakte hain.' : 'Build successful hai; APK release link load ho raha hai.')
+        : failed
+          ? 'Build fail hua: ' + (failedStep?.name || run.conclusion || 'GitHub Actions error')
+          : activeStep ? activeStep.name + ' chal raha hai…' : 'Android build queue mein hai…',
+      currentStep: activeStep?.name || (successful ? 'Build complete' : failed ? 'Build failed' : 'Waiting for runner'),
+      failedStep: failedStep?.name || null,
+      steps,
+      actionsUrl: run.html_url,
+      release
+    });
+  } catch (error) {
+    console.error('Build status lookup failed:', error.response?.status || error.message);
+    res.status(502).json({ success: false, error: 'GitHub se build status nahi mil saka. Thodi der baad refresh karein.' });
+  }
+});
+
 // Deleting published builds is restricted to a server-side admin key.
 app.delete('/delete-app/:id', async (req, res) => {
   const expected = process.env.ADMIN_API_KEY || '';
@@ -180,7 +275,7 @@ function buildHandler(req, res) {
     splashColor: /^#[0-9a-fA-F]{6}$/.test(p.splashColor || '') ? p.splashColor : '#071a33',
     splashDuration: [1500,2500,3000,4000].includes(Number(p.splashDuration)) ? Number(p.splashDuration) : 2500,
     statusBar: p.statusBar === 'dark' ? 'dark' : 'light',
-    buildId: 'build-' + crypto.randomUUID()
+    buildId: /^build-[a-zA-Z0-9-]{8,80}$/.test(String(p.buildId || '')) ? String(p.buildId) : 'build-' + crypto.randomUUID()
   };
   for (const field of buildFields) payload[field] = p[field] === true;
 
@@ -194,7 +289,7 @@ function buildHandler(req, res) {
       'User-Agent': 'My-App-Builder'
     }, timeout: 15000 }
   ).then(() => {
-    res.status(202).json({ success: true, message: 'Build request GitHub Actions ko bhej di gayi hai' });
+    res.status(202).json({ success: true, buildId: payload.buildId, message: 'Build request GitHub Actions ko bhej di gayi hai' });
   }).catch(error => {
     console.error('GitHub build dispatch failed:', error.response?.status || error.message);
     res.status(502).json({ success: false, error: 'GitHub par build request nahi ja saki' });
