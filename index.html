@@ -134,6 +134,7 @@ $('buildForm').addEventListener('submit',async e=>{
     btn.disabled=false;btn.textContent='⚡ Capacitor Android Build shuru karein';
   }
 })
+fetchApps();
 const savedBuildId=localStorage.getItem('myAppBuilderLastBuildId');if(savedBuildId)pollBuild(savedBuildId);
 
 </script></body></html>
