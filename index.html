@@ -8,7 +8,7 @@
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#12365a 0,#061426 55%);color:var(--text);font:15px system-ui,Arial,sans-serif;padding:18px}
 .wrap{max-width:900px;margin:auto}.hero{padding:22px 18px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(135deg,#102d4c,#0a1d33);margin-bottom:16px}
 .hero h1{margin:0 0 7px;font-size:26px}.hero p{color:var(--muted);margin:0;line-height:1.5}.tag{display:inline-block;color:#8ff4d5;background:#103e3a;border:1px solid #1c6a5d;border-radius:30px;padding:5px 10px;font-size:12px;margin-bottom:10px}
-.panel{background:rgba(13,34,59,.96);border:1px solid var(--line);border-radius:17px;padding:17px;margin:14px 0}.panel h2{font-size:18px;margin:0 0 14px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{min-width:0}.field.full{grid-column:1/-1}label{display:block;font-weight:650;margin:8px 0 6px;font-size:13px;color:#d8e8f8}input,select{width:100%;padding:12px;border:1px solid #31516f;border-radius:10px;background:#071a2e;color:white;font:inherit;min-height:44px}input[type=color]{padding:4px;height:45px}input[type=checkbox]{width:18px;min-height:18px;accent-color:var(--green)}input[type=file]{padding:8px}.hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.check{display:flex;align-items:center;gap:9px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#0a1d32}.check label{margin:0;font-weight:500}.btn{width:100%;border:0;border-radius:12px;padding:15px;background:linear-gradient(90deg,#16a879,#20c997);color:#03251e;font-size:16px;font-weight:800;margin-top:15px}.btn:disabled{opacity:.65}.secondary{background:#153654;color:#eaf4ff;border:1px solid #31516f}.status{padding:12px;border-radius:10px;background:#091b2e;color:#b8d1e9;margin-top:12px;white-space:pre-wrap}.app{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:12px;margin:9px 0;background:#0a1d32}.app small{display:block;color:var(--muted);margin-top:4px}.app a{color:#8fc6ff}.preview{max-width:78px;max-height:78px;object-fit:contain;margin-top:8px;border-radius:12px;display:none;background:#fff}.section-note{color:#8ff4d5;font-size:12px;margin:-5px 0 12px}.foot{color:var(--muted);font-size:12px;text-align:center;padding:18px}
+.panel{background:rgba(13,34,59,.96);border:1px solid var(--line);border-radius:17px;padding:17px;margin:14px 0}.panel h2{font-size:18px;margin:0 0 14px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{min-width:0}.field.full{grid-column:1/-1}label{display:block;font-weight:650;margin:8px 0 6px;font-size:13px;color:#d8e8f8}input,select{width:100%;padding:12px;border:1px solid #31516f;border-radius:10px;background:#071a2e;color:white;font:inherit;min-height:44px}input[type=color]{padding:4px;height:45px}input[type=checkbox]{width:18px;min-height:18px;accent-color:var(--green)}input[type=file]{padding:8px}.hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.check{display:flex;align-items:center;gap:9px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#0a1d32}.check label{margin:0;font-weight:500}.btn{width:100%;border:0;border-radius:12px;padding:15px;background:linear-gradient(90deg,#16a879,#20c997);color:#03251e;font-size:16px;font-weight:800;margin-top:15px}.btn:disabled{opacity:.65}.secondary{background:#153654;color:#eaf4ff;border:1px solid #31516f}.status{padding:12px;border-radius:10px;background:#091b2e;color:#b8d1e9;margin-top:12px;white-space:pre-wrap}.progress-track{height:9px;background:#18334e;border-radius:20px;overflow:hidden;margin:10px 0}.progress-fill{height:100%;width:0;background:linear-gradient(90deg,#16a879,#20c997);transition:width .35s}.build-meta{font-size:12px;color:var(--muted);overflow-wrap:anywhere}.build-steps{display:grid;gap:7px;margin-top:10px}.build-step{display:flex;gap:8px;align-items:flex-start;font-size:13px}.build-step.done{color:#8ff4d5}.build-step.failed{color:#ff9b9b}.download-link{display:inline-block;margin:8px 8px 0 0;padding:11px 14px;border-radius:10px;background:#16a879;color:#03251e;font-weight:800;text-decoration:none}.actions-link{color:#8fc6ff}.app{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:12px;margin:9px 0;background:#0a1d32}.app small{display:block;color:var(--muted);margin-top:4px}.app a{color:#8fc6ff}.preview{max-width:78px;max-height:78px;object-fit:contain;margin-top:8px;border-radius:12px;display:none;background:#fff}.section-note{color:#8ff4d5;font-size:12px;margin:-5px 0 12px}.foot{color:var(--muted);font-size:12px;text-align:center;padding:18px}
 @media(max-width:600px){body{padding:10px}.grid,.checks{grid-template-columns:1fr}.hero h1{font-size:22px}.panel{padding:14px}.app{align-items:flex-start;flex-direction:column}}
 </style></head>
 <body><main class="wrap">
@@ -75,5 +75,63 @@ async function uploadImage(inputId){const f=$(inputId).files[0];if(!f)return '';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function fetchApps(){try{const r=await fetch('/api/releases?t='+Date.now());if(!r.ok)throw Error();const a=await r.json();$('appList').innerHTML=a.length?a.map(x=>{const title=esc(x.name||'My App');const asset=(x.assets||[]).find(z=>z.name.endsWith('.apk'));return '<div class="app"><div><b>'+title+'</b><small>'+new Date(x.published_at).toLocaleString()+'</small></div><div>'+(asset?'<a target="_blank" rel="noopener" href="'+esc(asset.browser_download_url)+'">APK download</a>':'<a target="_blank" rel="noopener" href="'+esc(x.html_url)+'">Build details</a>')+'</div></div>'}).join(''):'<p class="hint">Abhi koi generated app nahi hai.</p>'}catch(e){$('appList').textContent='App list abhi load nahi ho saki.'}}
 const checks=['permCamera','permMicrophone','permLocation','permNotifications','permPhotos','permFiles','permBluetooth','plugCamera','plugGeolocation','plugFilesystem','plugShare','plugDevice','plugNetwork','plugPreferences','plugBrowser','plugLocalNotifications','plugStatusBar','plugSplash','plugHaptics','fullScreen'];
-$('buildForm').addEventListener('submit',async e=>{e.preventDefault();const btn=$('submitBtn'),status=$('buildStatus');const pkg=$('packageName').value.trim();if(!/^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(pkg)){status.textContent='Package ID sahi format mein likhein, jaise com.company.app';return}const payload={callbackUrl:$("callbackUrl").value.trim(),appLinkUrl:$("appLinkUrl").value.trim(),appName:$('appName').value.trim(),appUrl:$('appUrl').value.trim(),packageName:pkg.toLowerCase(),versionName:$('versionName').value.trim()||'1.0.0',versionCode:Number($('versionCode').value)||1,orientation:$('orientation').value,buildType:$('buildType').value,appIconUrl:'',splashImageUrl:'',themeColor:$('themeColor').value,splashColor:$('splashColor').value,splashDuration:Number($('splashDuration').value),statusBar:$('statusBar').value};checks.forEach(k=>payload[k]=$(k).checked);payload.buildId='build-'+Date.now();btn.disabled=true;btn.textContent='⏳ Build request bhej rahe hain…';status.textContent='Gallery se chuni hui images upload ho rahi hain…';try{payload.appIconUrl=await uploadImage('appIconFile');payload.splashImageUrl=await uploadImage('splashImageFile');status.textContent='GitHub Actions ko build request bheji ja rahi hai…';const r=await fetch('/api/build',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok||!d.success)throw Error(d.error||'Build request fail hui');status.textContent='Build start ho gaya. Build complete hone par APK neeche Apps list mein dikhega. GitHub Actions mein progress bhi check kar sakte hain.';btn.textContent='Build chal raha hai…';let n=0;const timer=setInterval(async()=>{n++;await fetchApps();if(n>=60){clearInterval(timer);btn.disabled=false;btn.textContent='⚡ Dobara Build karein';status.textContent+='\nBuild mein zyada waqt lag raha hai. Thodi der baad list refresh karein.'}},10000)}catch(err){status.textContent='Build start nahi hua: '+err.message;btn.disabled=false;btn.textContent='⚡ Capacitor Android Build shuru karein'}});fetchApps();
+async function pollBuild(buildId){
+  const status=$('buildStatus');
+  try{
+    const r=await fetch('/api/build-status/'+encodeURIComponent(buildId)+'?t='+Date.now(),{cache:'no-store'});
+    const d=await r.json();
+    if(!r.ok||!d.success) throw Error(d.error||'Build status load nahi hua');
+    const steps=(d.steps||[]).map(step=>{
+      const done=step.status==='completed'&&step.conclusion==='success';
+      const failed=step.conclusion==='failure';
+      const mark=done?'✓':failed?'✕':step.status==='in_progress'?'●':'○';
+      return '<div class="build-step '+(done?'done':failed?'failed':'')+'"><b>'+mark+'</b><span>'+esc(step.name)+(step.status==='in_progress'?' — chal raha hai':'')+(failed?' — failed':'')+'</span></div>';
+    }).join('');
+    let links='';
+    if(d.release){
+      if(d.release.apkUrl) links+='<a class="download-link" href="'+esc(d.release.apkUrl)+'" target="_blank" rel="noopener">⬇ Download APK</a>';
+      if(d.release.aabUrl) links+='<a class="download-link" href="'+esc(d.release.aabUrl)+'" target="_blank" rel="noopener">⬇ Download AAB</a>';
+      if(d.release.url) links+='<p><a class="actions-link" href="'+esc(d.release.url)+'" target="_blank" rel="noopener">Alag GitHub Release link kholein</a></p>';
+    }
+    const actions=d.actionsUrl?'<p><a class="actions-link" href="'+esc(d.actionsUrl)+'" target="_blank" rel="noopener">Build logs / exact error dekhein</a></p>':'';
+    const percent=Math.max(0,Math.min(100,Number(d.progress)||0));
+    status.innerHTML='<b>'+esc(d.message||'Build status')+'</b><div class="build-meta">Build ID: '+esc(buildId)+(d.runId?' · GitHub Run: '+esc(d.runId):'')+'</div><div class="progress-track"><div class="progress-fill" style="width:'+percent+'%"></div></div><div class="build-meta">'+percent+'% · '+esc(d.currentStep||'Waiting')+'</div>'+(steps?'<div class="build-steps">'+steps+'</div>':'')+links+actions;
+    await fetchApps();
+    if(d.status==='success'){
+      $('submitBtn').disabled=false;$('submitBtn').textContent='⚡ Naya APK banayein';return;
+    }
+    if(d.status==='failure'){
+      $('submitBtn').disabled=false;$('submitBtn').textContent='⚡ Dobara Build karein';return;
+    }
+    window.setTimeout(()=>pollBuild(buildId),8000);
+  }catch(err){
+    status.textContent='Build bhej diya gaya hai, lekin status abhi nahi mil raha: '+err.message+'\nBuild ID: '+buildId+'\nKuch der baad page refresh karke Apps list check karein.';
+    window.setTimeout(()=>pollBuild(buildId),15000);
+  }
+}
+$('buildForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=$('submitBtn'),status=$('buildStatus');
+  const pkg=$('packageName').value.trim();
+  if(!/^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(pkg)){
+    status.textContent='Package ID sahi format mein likhein, jaise com.company.app';return;
+  }
+  const buildId='build-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+  const payload={buildId,callbackUrl:$("callbackUrl").value.trim(),appLinkUrl:$("appLinkUrl").value.trim(),appName:$('appName').value.trim(),appUrl:$('appUrl').value.trim(),packageName:pkg.toLowerCase(),versionName:$('versionName').value.trim()||'1.0.0',versionCode:Number($('versionCode').value)||1,orientation:$('orientation').value,buildType:$('buildType').value,appIconUrl:'',splashImageUrl:'',themeColor:$('themeColor').value,splashColor:$('splashColor').value,splashDuration:Number($('splashDuration').value),statusBar:$('statusBar').value};
+  checks.forEach(k=>payload[k]=$(k).checked);
+  btn.disabled=true;btn.textContent='⏳ Build request bhej rahe hain…';
+  status.textContent='Gallery se chuni hui images upload ho rahi hain…';
+  try{
+    payload.appIconUrl=await uploadImage('appIconFile');
+    payload.splashImageUrl=await uploadImage('splashImageFile');
+    status.textContent='GitHub Actions ko Capacitor Android build request bhej rahe hain…';
+    const r=await fetch('/api/build',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(!r.ok||!d.success)throw Error(d.error||'Build request fail hui');
+    pollBuild(d.buildId||buildId);
+  }catch(err){
+    status.textContent='Build start nahi hua: '+err.message;
+    btn.disabled=false;btn.textContent='⚡ Capacitor Android Build shuru karein';
+  }
+})
 </script></body></html>
