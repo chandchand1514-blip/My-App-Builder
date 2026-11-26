@@ -279,9 +279,16 @@ function buildHandler(req, res) {
   };
   for (const field of buildFields) payload[field] = p[field] === true;
 
+  // GitHub repository_dispatch permits at most 10 top-level client_payload keys.
+  // Keep buildId top-level for run tracking and nest all form settings under config.
+  const buildId = payload.buildId;
+  const config = { ...payload };
+  delete config.buildId;
+  const dispatchPayload = { buildId, config };
+
   axios.post(
     `https://api.github.com/repos/${process.env.GITHUB_REPO}/dispatches`,
-    { event_type: 'build-app', client_payload: payload },
+    { event_type: 'build-app', client_payload: dispatchPayload },
     { headers: {
       Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
       Accept: 'application/vnd.github+json',
