@@ -112,7 +112,9 @@ jobs:
       - name: Apply Android settings and permissions
         env:
           EVENT_PATH: ${{ github.event_path }}
-          APP_ID: ${{ steps.config.outputs.app_id }}\n          CALLBACK_URL: ${{ github.event.client_payload.callbackUrl }}\n          APP_LINK_URL: ${{ github.event.client_payload.appLinkUrl }}
+          APP_ID: ${{ steps.config.outputs.app_id }}
+          CALLBACK_URL: ${{ github.event.client_payload.callbackUrl }}
+          APP_LINK_URL: ${{ github.event.client_payload.appLinkUrl }}
           VERSION_NAME: ${{ steps.config.outputs.version_name }}
           VERSION_CODE: ${{ steps.config.outputs.version_code }}
         run: |
