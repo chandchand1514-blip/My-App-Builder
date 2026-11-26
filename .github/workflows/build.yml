@@ -252,7 +252,7 @@ jobs:
           BUILD_TYPE: ${{ steps.config.outputs.build_type }}
         run: |
           mkdir -p dist
-          cp generated/android/app/build/outputs/apk/debug/app-debug.apk dist/${APP_ID##*.}-debug.apk
+          cp generated/android/app/build/outputs/apk/debug/app-debug.apk "dist/${APP_ID##*.}-debug.apk"
           if [ "$BUILD_TYPE" = "both" ] && [ -f generated/android/app/build/outputs/bundle/debug/app-debug.aab ]; then
             cp generated/android/app/build/outputs/bundle/debug/app-debug.aab dist/app-debug.aab
           fi
