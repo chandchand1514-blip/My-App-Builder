@@ -74,7 +74,7 @@ jobs:
           }
           selected=[pkg for key,pkg in plugins.items() if p.get(key) is True]
           base=["@capacitor/core@6","@capacitor/android@6","@capacitor/cli@6"]
-          package={"name":"generated-capacitor-app","version":"1.0.0","private":True,"type":"module","scripts":{"build":"echo Capacitor wrapper"},"dependencies":{x.split("@")[0]:x.split("@")[-1] for x in base+selected}}
+          package={"name":"generated-capacitor-app","version":"1.0.0","private":True,"type":"module","scripts":{"build":"echo Capacitor wrapper"},"dependencies":{x.rsplit("@",1)[0]:x.rsplit("@",1)[1] for x in base+selected}}
           os.makedirs("generated",exist_ok=True)
           json.dump(package,open("generated/package.json","w"),indent=2)
           config={
@@ -90,7 +90,7 @@ jobs:
                 "showSpinner":False,
                 "androidScaleType":"CENTER_INSIDE"
               },
-              "StatusBar":{"backgroundColor":clean(p.get("themeColor"),"#071a33",7),"style":clean(p.get("statusBar"),"light",8)}
+              "StatusBar":{"backgroundColor":clean(p.get("themeColor"),"#071a33",7),"style":clean(p.get("statusBar"),"light",8).upper()}
             }
           }
           json.dump(config,open("generated/capacitor.config.json","w"),indent=2)
