@@ -59,9 +59,9 @@ jobs:
               from urllib.parse import urlparse
               u=urlparse(callback)
               if not u.scheme or not (u.netloc or u.path):
+                  raise SystemExit("Invalid callback URL. Example: staffpro://auth/callback")
               if any(ch.isspace() for ch in callback):
                   raise SystemExit("Callback URL cannot contain spaces")
-              raise SystemExit("Invalid callback URL. Example: staffpro://auth/callback")
           if app_link and not app_link.startswith("https://"):
               raise SystemExit("HTTPS App Link must start with https://")
           version_name=clean(p.get("versionName"), "1.0.0", 30)
