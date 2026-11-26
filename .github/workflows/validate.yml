@@ -1,0 +1,34 @@
+name: Validate Builder Workflows
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [capacitor-builder-v2]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate GitHub Actions syntax
+        uses: raven-actions/actionlint@v2
+
+      - name: Compile embedded Python build scripts
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, textwrap
+          source = pathlib.Path(".github/workflows/build.yml").read_text()
+          blocks = re.findall(r"(?m)^ {10}python3 - <<'PY'\n(.*?)^ {10}PY\s*$", source, re.S)
+          if not blocks:
+              raise SystemExit("No embedded Python scripts found")
+          for index, block in enumerate(blocks, 1):
+              code = textwrap.dedent(block)
+              compile(code, f"build-script-{index}", "exec")
+              print(f"Python build script {index}: syntax OK")
+          PY
