@@ -93,8 +93,13 @@ jobs:
             "plugHaptics":"@capacitor/haptics@6"
           }
           selected=[pkg for key,pkg in plugins.items() if p.get(key) is True]
-          if (p.get("callbackUrl") or p.get("appLinkUrl")) and "@capacitor/app@6" not in selected:
-            selected.append("@capacitor/app@6")
+          if p.get("callbackUrl") or p.get("appLinkUrl"):
+            if "@capacitor/app@6" not in selected:
+              selected.append("@capacitor/app@6")
+          # A custom-scheme OAuth callback needs Android Custom Tabs plus App URL events.
+          callback_scheme=p.get("callbackUrl","").split(":",1)[0].lower()
+          if callback_scheme and callback_scheme not in ("http","https") and "@capacitor/browser@6" not in selected:
+            selected.append("@capacitor/browser@6")
           base=["@capacitor/core@6","@capacitor/android@6","@capacitor/cli@6"]
           package={"name":"generated-capacitor-app","version":"1.0.0","private":True,"type":"module","scripts":{"build":"echo Capacitor wrapper"},"dependencies":{x.rsplit("@",1)[0]:x.rsplit("@",1)[1] for x in base+selected}}
           os.makedirs("generated",exist_ok=True)
