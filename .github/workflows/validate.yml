@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [capacitor-builder-v2]
+    branches: [main, capacitor-builder-v2]
 
 permissions:
   contents: read
