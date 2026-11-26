@@ -3,6 +3,8 @@ name: Capacitor Android Builder
 on:
   repository_dispatch:
     types: [build-app]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
@@ -38,11 +40,14 @@ jobs:
         id: config
         env:
           EVENT_PATH: ${{ github.event_path }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           python3 - <<'PY'
           import json, os, re, sys
           event=json.load(open(os.environ["EVENT_PATH"], encoding="utf-8"))
           p=event.get("client_payload") or {}
+          if os.environ.get("EVENT_NAME") == "pull_request":
+              p={"appName":"Builder Test","packageName":"com.example.buildertest","appUrl":"https://example.com","callbackUrl":"myappbuildertest://auth/callback","appLinkUrl":"https://example.com/auth/callback","buildType":"apk"}
           def clean(v, default="", limit=100):
               s=str(v or default).strip()
               return s[:limit]
@@ -229,7 +234,16 @@ jobs:
         working-directory: generated/android
         run: ./gradlew --no-daemon bundleDebug
 
+      - name: Upload pull request test APK
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: builder-pr-test-apk
+          path: generated/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
       - name: Publish build files
+        if: github.event_name == 'repository_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
           APP_NAME: ${{ steps.config.outputs.app_name }}
