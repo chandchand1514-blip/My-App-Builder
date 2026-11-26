@@ -221,12 +221,27 @@ jobs:
               if len(data)<=5*1024*1024: open("/tmp/custom-icon","wb").write(data)
             except Exception as e: print("Custom icon skipped:",e)
           PY
+          python3 - <<'PY'
+          import json,urllib.request
+          p=json.load(open("generated/build-options.json",encoding="utf-8"))
+          url=p.get("splashImageUrl","")
+          if url.startswith("https://"):
+            try:
+              req=urllib.request.Request(url,headers={"User-Agent":"My-App-Builder"})
+              data=urllib.request.urlopen(req,timeout=20).read(5*1024*1024+1)
+              if len(data)<=5*1024*1024: open("/tmp/custom-splash","wb").write(data)
+            except Exception as e: print("Custom splash image skipped:",e)
+          PY
           if [ -f /tmp/custom-icon ]; then
             for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
               case "$density" in mdpi) size=48;; hdpi) size=72;; xhdpi) size=96;; xxhdpi) size=144;; xxxhdpi) size=192;; esac
               mkdir -p "generated/android/app/src/main/res/mipmap-$density"
               convert /tmp/custom-icon -auto-orient -thumbnail "${size}x${size}" -background white -gravity center -extent "${size}x${size}" "generated/android/app/src/main/res/mipmap-$density/ic_launcher.png"
             done
+          fi
+          if [ -f /tmp/custom-splash ]; then
+            mkdir -p generated/android/app/src/main/res/drawable
+            convert /tmp/custom-splash -auto-orient -resize '1080x1920>' -background '#071a33' -gravity center -extent 1080x1920 generated/android/app/src/main/res/drawable/splash.png
           fi
 
       - name: Build Android APK
