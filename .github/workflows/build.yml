@@ -1,243 +1,265 @@
-name: Build APK Engine
+name: Capacitor Android Builder
 
 on:
   repository_dispatch:
     types: [build-app]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
+concurrency:
+  group: app-build-${{ github.event.client_payload.buildId || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
-      - name: Checkout Code
+      - name: Checkout builder
         uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          distribution: 'temurin'
+          node-version: 20
+          cache: ''
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
           java-version: '17'
 
-      - name: Setup Permanent Keystore
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ ! -f "master.keystore" ]; then
-            keytool -genkey -v -keystore master.keystore -alias master_alias -keyalg RSA -keysize 2048 -validity 10000 -storepass master123 -keypass master123 -dname "CN=AppBuilder, O=Company, C=IN"
-            git config --global user.name "github-actions[bot]"
-            git config --global user.email "github-actions[bot]@users.noreply.github.com"
-            git add master.keystore
-            git commit -m "Added permanent keystore"
-            git push
-          fi
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.4'
-
-      - name: Install Image Converter
+      - name: Install image tools
         run: sudo apt-get update && sudo apt-get install -y imagemagick
 
-      - name: Generate Master App Code
+      - name: Prepare Capacitor project
+        id: config
+        env:
+          EVENT_PATH: ${{ github.event_path }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          RAW_PKG="${{ github.event.client_payload.packageName }}"
-          PKG=$(echo "$RAW_PKG" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:].')
-          if [[ "$PKG" != *"."* ]] && [ -n "$PKG" ]; then PKG="com.${PKG}.app"; fi
-          if [ -z "$PKG" ]; then PKG="com.universal.app"; fi
-          PKG_DIR=$(echo "$PKG" | tr '.' '/')
+          python3 - <<'PY'
+          import json, os, re, sys
+          event=json.load(open(os.environ["EVENT_PATH"], encoding="utf-8"))
+          p=event.get("client_payload") or {}
+          if os.environ.get("EVENT_NAME") == "pull_request":
+              p={"appName":"Builder Test","packageName":"com.example.buildertest","appUrl":"https://example.com","callbackUrl":"myappbuildertest://auth/callback","appLinkUrl":"https://example.com/auth/callback","buildType":"apk"}
+          def clean(v, default="", limit=100):
+              s=str(v or default).strip()
+              return s[:limit]
+          app_name=clean(p.get("appName"), "My App", 40)
+          app_id=clean(p.get("packageName"), "com.example.myapp", 180).lower()
+          if not re.fullmatch(r"[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+", app_id):
+              raise SystemExit("Invalid Android package ID")
+          app_url=clean(p.get("appUrl"), "", 2000)
+          if not app_url.startswith("https://"):
+              raise SystemExit("App URL must use HTTPS")
+          callback=clean(p.get("callbackUrl"), "", 500)
+          app_link=clean(p.get("appLinkUrl"), "", 1000)
+          if callback:
+              from urllib.parse import urlparse
+              u=urlparse(callback)
+              if not u.scheme or not (u.netloc or u.path):
+                  raise SystemExit("Invalid callback URL. Example: staffpro://auth/callback")
+              if any(ch.isspace() for ch in callback):
+                  raise SystemExit("Callback URL cannot contain spaces")
+          if app_link and not app_link.startswith("https://"):
+              raise SystemExit("HTTPS App Link must start with https://")
+          version_name=clean(p.get("versionName"), "1.0.0", 30)
+          if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]*", version_name):
+              raise SystemExit("Version name may contain only letters, numbers, dot, underscore, plus and hyphen")
+          try: version_code=max(1,int(p.get("versionCode",1)))
+          except: version_code=1
+          build_type=p.get("buildType","apk")
+          if build_type not in ("apk","both"): build_type="apk"
+          plugins={
+            "plugCamera":"@capacitor/camera@6",
+            "plugGeolocation":"@capacitor/geolocation@6",
+            "plugFilesystem":"@capacitor/filesystem@6",
+            "plugShare":"@capacitor/share@6",
+            "plugDevice":"@capacitor/device@6",
+            "plugNetwork":"@capacitor/network@6",
+            "plugPreferences":"@capacitor/preferences@6",
+            "plugBrowser":"@capacitor/browser@6",
+            "plugLocalNotifications":"@capacitor/local-notifications@6",
+            "plugStatusBar":"@capacitor/status-bar@6",
+            "plugSplash":"@capacitor/splash-screen@6",
+            "plugHaptics":"@capacitor/haptics@6"
+          }
+          selected=[pkg for key,pkg in plugins.items() if p.get(key) is True]
+          if (p.get("callbackUrl") or p.get("appLinkUrl")) and "@capacitor/app@6" not in selected:
+            selected.append("@capacitor/app@6")
+          base=["@capacitor/core@6","@capacitor/android@6","@capacitor/cli@6"]
+          package={"name":"generated-capacitor-app","version":"1.0.0","private":True,"type":"module","scripts":{"build":"echo Capacitor wrapper"},"dependencies":{x.rsplit("@",1)[0]:x.rsplit("@",1)[1] for x in base+selected}}
+          os.makedirs("generated",exist_ok=True)
+          json.dump(package,open("generated/package.json","w"),indent=2)
+          config={
+            "appId":app_id,
+            "appName":app_name,
+            "webDir":"www",
+            "server":{"url":app_url,"cleartext":False,"allowNavigation":[app_url.split("/")[2]]},
+            "plugins":{
+              "SplashScreen":{
+                "launchShowDuration":int(p.get("splashDuration",2500) or 2500),
+                "launchAutoHide":True,
+                "backgroundColor":clean(p.get("splashColor"),"#071a33",7),
+                "showSpinner":False,
+                "androidScaleType":"CENTER_INSIDE"
+              },
+              "StatusBar":{"backgroundColor":clean(p.get("themeColor"),"#071a33",7),"style":clean(p.get("statusBar"),"light",8).upper()}
+            }
+          }
+          json.dump(config,open("generated/capacitor.config.json","w"),indent=2)
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:
+            f.write(f"app_name={app_name.replace(chr(10),' ')}\n")
+            f.write(f"app_id={app_id}\n")
+            f.write(f"version_name={version_name}\n")
+            f.write(f"version_code={version_code}\n")
+            f.write(f"build_type={build_type}\n")
+            f.write(f"plugin_count={len(selected)}\n")
+          with open("generated/build-options.json","w") as f: json.dump(p,f)
+          PY
+          cd generated
+          npm install --no-audit --no-fund
+          mkdir -p www
+          printf '<!doctype html><html><head><meta charset="utf-8"></head><body>Loading app…</body></html>' > www/index.html
+          npx cap add android
 
-          THEME_COLOR="${{ github.event.client_payload.themeColor }}"
-          if [ -z "$THEME_COLOR" ] || [ "$THEME_COLOR" == "" ] || [ "$THEME_COLOR" == "null" ]; then THEME_COLOR="#000000"; fi
-          
-          SPLASH_COLOR="${{ github.event.client_payload.splashColor }}"
-          if [ -z "$SPLASH_COLOR" ] || [ "$SPLASH_COLOR" == "" ] || [ "$SPLASH_COLOR" == "null" ]; then SPLASH_COLOR="#ffffff"; fi
+      - name: Apply Android settings and permissions
+        env:
+          EVENT_PATH: ${{ github.event_path }}
+          APP_ID: ${{ steps.config.outputs.app_id }}
+          CALLBACK_URL: ${{ github.event.client_payload.callbackUrl }}
+          APP_LINK_URL: ${{ github.event.client_payload.appLinkUrl }}
+          VERSION_NAME: ${{ steps.config.outputs.version_name }}
+          VERSION_CODE: ${{ steps.config.outputs.version_code }}
+        run: |
+          python3 - <<'PY'
+          import json, os, xml.etree.ElementTree as ET
+          p=json.load(open("generated/build-options.json",encoding="utf-8"))
+          manifest="generated/android/app/src/main/AndroidManifest.xml"
+          tree=ET.parse(manifest); root=tree.getroot()
+          A="{http://schemas.android.com/apk/res/android}"
+          permissions={
+            "permCamera":["android.permission.CAMERA"],
+            "permMicrophone":["android.permission.RECORD_AUDIO"],
+            "permLocation":["android.permission.ACCESS_COARSE_LOCATION","android.permission.ACCESS_FINE_LOCATION"],
+            "permNotifications":["android.permission.POST_NOTIFICATIONS"],
+            "permPhotos":["android.permission.READ_MEDIA_IMAGES","android.permission.READ_MEDIA_VIDEO"],
+            "permFiles":["android.permission.READ_EXTERNAL_STORAGE"],
+            "permBluetooth":["android.permission.BLUETOOTH_CONNECT","android.permission.BLUETOOTH_SCAN"]
+          }
+          existing={x.get(A+"name") for x in root.findall("uses-permission")}
+          for key,names in permissions.items():
+            if p.get(key):
+              for name in names:
+                if name not in existing:
+                  el=ET.Element("uses-permission"); el.set(A+"name",name)
+                  if name=="android.permission.READ_EXTERNAL_STORAGE": el.set(A+"maxSdkVersion","32")
+                  if name.startswith("android.permission.BLUETOOTH_"): el.set(A+"usesPermissionFlags","neverForLocation")
+                  root.insert(0,el); existing.add(name)
+          activity=root.find(".//activity")
+          if activity is not None:
+            from urllib.parse import urlparse
+            if os.environ.get("CALLBACK_URL"):
+              u=urlparse(os.environ["CALLBACK_URL"])
+              intent=ET.SubElement(activity,"intent-filter")
+              ET.SubElement(intent,"action").set(A+"name","android.intent.action.VIEW")
+              ET.SubElement(intent,"category").set(A+"name","android.intent.category.DEFAULT")
+              ET.SubElement(intent,"category").set(A+"name","android.intent.category.BROWSABLE")
+              data=ET.SubElement(intent,"data")
+              data.set(A+"scheme",u.scheme)
+              if u.netloc: data.set(A+"host",u.netloc)
+              if u.path: data.set(A+"path",u.path)
+            if os.environ.get("APP_LINK_URL"):
+              u=urlparse(os.environ["APP_LINK_URL"])
+              intent=ET.SubElement(activity,"intent-filter")
+              intent.set(A+"autoVerify","true")
+              ET.SubElement(intent,"action").set(A+"name","android.intent.action.VIEW")
+              ET.SubElement(intent,"category").set(A+"name","android.intent.category.DEFAULT")
+              ET.SubElement(intent,"category").set(A+"name","android.intent.category.BROWSABLE")
+              data=ET.SubElement(intent,"data")
+              data.set(A+"scheme","https"); data.set(A+"host",u.netloc)
+              if u.path: data.set(A+"path",u.path)
+            orientation=p.get("orientation","default")
+            if orientation in ("portrait","landscape"): activity.set(A+"screenOrientation",orientation)
+          ET.register_namespace("android","http://schemas.android.com/apk/res/android")
+          tree.write(manifest,encoding="utf-8",xml_declaration=True)
+          gradle="generated/android/app/build.gradle"
+          s=open(gradle).read()
+          import re
+          s=re.sub(r'versionCode\s+\d+',f'versionCode {int(os.environ["VERSION_CODE"])}',s)
+          s=re.sub(r'versionName\s+"[^"]+"',f'versionName "{os.environ["VERSION_NAME"]}"',s)
+          open(gradle,"w").write(s)
+          # Full-screen preference is applied through the app theme.
+          if p.get("fullScreen"):
+            for path in ["generated/android/app/src/main/res/values/styles.xml"]:
+              if os.path.exists(path):
+                t=open(path).read()
+                t=t.replace("</style>",'<item name="android:windowFullscreen">true</item></style>',1)
+                open(path,"w").write(t)
+          PY
+          cd generated
+          npx cap sync android
 
-          mkdir -p "app/src/main/java/$PKG_DIR"
-          mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/layout
-          mkdir -p app/src/main/res/mipmap-xxxhdpi
-          mkdir -p app/src/main/res/drawable
-          mkdir -p app/src/main/assets
-          
-          cp master.keystore app/master.keystore
-          
-          if [ -n "${{ github.event.client_payload.appIconUrl }}" ]; then
-            curl -L "${{ github.event.client_payload.appIconUrl }}" -o temp_icon.img || true
-            convert temp_icon.img -resize 512x512 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || true
+      - name: Apply custom launcher icon
+        env:
+          EVENT_PATH: ${{ github.event_path }}
+        run: |
+          python3 - <<'PY'
+          import json,os,urllib.request
+          p=json.load(open("generated/build-options.json",encoding="utf-8"))
+          url=p.get("appIconUrl","")
+          if url.startswith("https://"):
+            try:
+              req=urllib.request.Request(url,headers={"User-Agent":"My-App-Builder"})
+              data=urllib.request.urlopen(req,timeout=20).read(5*1024*1024+1)
+              if len(data)<=5*1024*1024: open("/tmp/custom-icon","wb").write(data)
+            except Exception as e: print("Custom icon skipped:",e)
+          PY
+          if [ -f /tmp/custom-icon ]; then
+            for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+              case "$density" in mdpi) size=48;; hdpi) size=72;; xhdpi) size=96;; xxhdpi) size=144;; xxxhdpi) size=192;; esac
+              mkdir -p "generated/android/app/src/main/res/mipmap-$density"
+              convert /tmp/custom-icon -auto-orient -thumbnail "${size}x${size}" -background white -gravity center -extent "${size}x${size}" "generated/android/app/src/main/res/mipmap-$density/ic_launcher.png"
+            done
           fi
-          
-          cat << 'EOF' > gradle.properties
-          android.useAndroidX=true
-          android.enableJetifier=true
-          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-          EOF
-          
-          cat << 'EOF' > settings.gradle
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
-          rootProject.name = "My-App-Builder"
-          include ':app'
-          EOF
-          
-          cat << EOF > app/build.gradle
-          plugins { id 'com.android.application' }
-          android { 
-              namespace "$PKG"
-              compileSdk 34
-              signingConfigs {
-                  release {
-                      storeFile file("master.keystore")
-                      storePassword "master123"
-                      keyAlias "master_alias"
-                      keyPassword "master123"
-                  }
-              }
-              defaultConfig { 
-                  applicationId "$PKG"
-                  minSdk 24
-                  targetSdk 34
-                  versionCode ${{ github.run_number }}
-                  versionName "1.0"
-              }
-              buildTypes {
-                  release { signingConfig signingConfigs.release; minifyEnabled false }
-              }
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-          }
-          dependencies {
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'com.google.android.material:material:1.11.0'
-              implementation 'androidx.browser:browser:1.7.0'
-          }
-          EOF
-          
-          cat << EOF > app/src/main/res/values/themes.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                  <item name="android:windowBackground">${SPLASH_COLOR}</item>
-                  <item name="android:statusBarColor">${THEME_COLOR}</item>
-              </style>
-          </resources>
-          EOF
-          
-          cat << EOF > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:theme="@style/AppTheme" android:usesCleartextTraffic="true">
-                  <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize" android:launchMode="singleTask">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                      <intent-filter android:autoVerify="true">
-                          <action android:name="android.intent.action.VIEW" />
-                          <category android:name="android.intent.category.DEFAULT" />
-                          <category android:name="android.intent.category.BROWSABLE" />
-                          <data android:scheme="myappauth" android:host="callback" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-          
-          cat << EOF > app/src/main/res/values/strings.xml
-          <resources><string name="app_name">${{ github.event.client_payload.appName }}</string></resources>
-          EOF
-          
-          cat << EOF > app/src/main/res/layout/activity_main.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
-              <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="match_parent" />
-          </LinearLayout>
-          EOF
-          
-          cat << 'EOF' > "app/src/main/java/$PKG_DIR/MainActivity.java"
-          package XXXXX;
-          import androidx.appcompat.app.AppCompatActivity;
-          import androidx.browser.customtabs.CustomTabsIntent;
-          import android.content.Intent;
-          import android.net.Uri;
-          import android.os.Bundle;
-          import android.webkit.CookieManager;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          
-          public class MainActivity extends AppCompatActivity {
-              private WebView webView;
-              
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  setContentView(R.layout.activity_main);
-                  
-                  webView = findViewById(R.id.webview);
-                  WebSettings ws = webView.getSettings();
-                  ws.setJavaScriptEnabled(true);
-                  ws.setDomStorageEnabled(true);
-                  
-                  CookieManager.getInstance().setAcceptCookie(true);
-                  CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
-                  
-                  webView.setWebViewClient(new WebViewClient() {
-                      @Override
-                      public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                          if (url != null && (url.contains("accounts.google.com") || url.contains("oauth"))) {
-                              try {
-                                  CustomTabsIntent customTabsIntent = new CustomTabsIntent.Builder().build();
-                                  customTabsIntent.launchUrl(MainActivity.this, Uri.parse(url));
-                                  return true;
-                              } catch (Exception e) { return false; }
-                          }
-                          return false;
-                      }
-                  });
-
-                  handleIntent(getIntent());
-              }
-
-              @Override
-              protected void onNewIntent(Intent intent) {
-                  super.onNewIntent(intent);
-                  setIntent(intent);
-                  handleIntent(intent);
-              }
-
-              private void handleIntent(Intent intent) {
-                  if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
-                      Uri data = intent.getData();
-                      if (data != null && "myappauth".equals(data.getScheme()) && "callback".equals(data.getHost())) {
-                          String token = data.getQueryParameter("token");
-                          if (token != null) {
-                              webView.evaluateJavascript("localStorage.setItem('auth_token', '" + token + "');", null);
-                              webView.loadUrl("WWWWW?token=" + token);
-                              return;
-                          }
-                      }
-                  }
-                  if (webView.getUrl() == null) {
-                      webView.loadUrl("WWWWW");
-                  }
-              }
-          }
-          EOF
-          sed -i "s/XXXXX/$PKG/g" "app/src/main/java/$PKG_DIR/MainActivity.java"
-          sed -i "s|WWWWW|${{ github.event.client_payload.appUrl }}|g" "app/src/main/java/$PKG_DIR/MainActivity.java"
 
       - name: Build Android APK
-        run: gradle assembleRelease
+        working-directory: generated/android
+        run: ./gradlew --no-daemon assembleDebug
 
-      - name: Create Direct Download Link
+      - name: Build Android App Bundle (optional)
+        if: steps.config.outputs.build_type == 'both'
+        working-directory: generated/android
+        run: ./gradlew --no-daemon bundleDebug
+
+      - name: Upload pull request test APK
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: builder-pr-test-apk
+          path: generated/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Publish build files
+        if: github.event_name == 'repository_dispatch'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          APP_NAME: ${{ steps.config.outputs.app_name }}
+          APP_ID: ${{ steps.config.outputs.app_id }}
+          BUILD_ID: ${{ github.event.client_payload.buildId || github.run_number }}
+          BUILD_TYPE: ${{ steps.config.outputs.build_type }}
         run: |
-          gh release create "build-${{ github.event.client_payload.buildId || github.run_number }}" app/build/outputs/apk/release/app-release.apk --title "${{ github.event.client_payload.appName }} | ${{ github.event.client_payload.packageName }}" --notes "Auto-generated APK build."
+          mkdir -p dist
+          cp generated/android/app/build/outputs/apk/debug/app-debug.apk "dist/${APP_ID##*.}-debug.apk"
+          if [ "$BUILD_TYPE" = "both" ] && [ -f generated/android/app/build/outputs/bundle/debug/app-debug.aab ]; then
+            cp generated/android/app/build/outputs/bundle/debug/app-debug.aab dist/app-debug.aab
+          fi
+          TAG="capacitor-${BUILD_ID}"
+          gh release create "$TAG" dist/* --title "$APP_NAME | $APP_ID" --notes "Capacitor Android build. APK is debug-signed for testing. A Play Store production AAB needs your own protected release signing key."
+          echo "Build published: $TAG"
